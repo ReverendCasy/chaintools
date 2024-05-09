@@ -1,0 +1,130 @@
+use anyhow::{Context, Result};
+use fxhash::FxHashMap;
+use memchr::memchr;
+use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
+use std::{fmt::Debug, fs::File, io::Read, path::Path};
+
+use crate::chain::Chain;
+
+/// A reader for chain files.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Reader {}
+
+impl Reader {
+    /// Create a new reader.
+    ///
+    /// # Arguments
+    ///
+    /// * `file` - A path to a chain file.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a `FxHashMap` of `Chain` objects.
+    ///
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use chainder as chain;
+    ///
+    /// let data = chain::Reader::from_file("/path/to/chainfile")?;
+    /// ```
+    pub fn from_file<T>(file: T) -> Result<FxHashMap<u32, Chain>>
+    where
+        T: AsRef<Path> + Debug,
+    {
+        let stat = std::fs::metadata(&file)
+            .with_context(|| format!("Failed to get metadata for {:?}", file))?;
+        let mut data = vec![];
+        data.reserve(stat.len() as usize + 1);
+
+        let mut f = File::open(&file).with_context(|| format!("Failed to open file {:?}", file))?;
+        f.read_to_end(&mut data)
+            .with_context(|| format!("Failed to read file {:?}", file))?;
+
+        Reader::parse(&data).with_context(|| format!("Failed to parse file {:?}", file))
+    }
+
+    /// Parser for chain files.
+    ///
+    /// # Arguments
+    /// * `data` - A reference to a byte slice.
+    ///
+    /// # Returns
+    /// A `Result` containing a `FxHashMap` of `Chain` objects.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use chainder as chain;
+    ///
+    /// let data = chain::Reader::parse(&data)?;
+    /// ```
+    pub fn parse(data: &[u8]) -> Result<FxHashMap<u32, Chain>> {
+        let mut vacc: Vec<(&[u8], &[u8])> = Vec::new();
+        let mut data = &data[..];
+        loop {
+            let sep = memchr(b'\n', &data).with_context(|| {
+                format!(
+                    "Failed to find separator in: {:?}. Bad formatted line!",
+                    String::from_utf8_lossy(data)
+                )
+            })?;
+            let Some(end) = memchr(b'c', &data[sep..]) else {
+                let header = &data[..sep];
+                let block = &data[sep + 1..];
+                vacc.push((header, block));
+                break;
+            };
+            let header = &data[..sep];
+            let block = &data[sep + 1..sep + end - 1];
+            vacc.push((header, block));
+            data = &data[sep + end..];
+        }
+
+        let chainfile = vacc
+            .par_iter()
+            .filter_map(|(header, block)| Chain::from(header, block))
+            .fold(
+                || FxHashMap::default(),
+                |mut acc, chain| {
+                    acc.insert(chain.0, chain.1);
+                    acc
+                },
+            )
+            .reduce(
+                || FxHashMap::default(),
+                |mut acc, map| {
+                    acc.extend(map);
+                    acc
+                },
+            );
+
+        Ok(chainfile)
+    }
+
+    /// Create a new reader from a byte slice.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - A reference to a byte slice.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a `FxHashMap` of `Chain` objects.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use chainder as chain;
+    ///
+    /// let line = b"chain 4900 chrY 58368225 + 25985403 25985638 chr5 151006098 - 43257292 43257528 1\n9\t1\t0\n\n";
+    /// let data = chain::Reader::from_bytes(line)?;
+    ///
+    /// assert_eq!(data.len(), 1);
+    /// ```
+    pub fn from_bytes(data: &[u8]) -> Result<FxHashMap<u32, Chain>> {
+        Reader::parse(data)
+    }
+}
