@@ -9,7 +9,7 @@ use crate::chain::Chain;
 
 /// A reader for chain files.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Reader {}
+pub struct Reader;
 
 impl Reader {
     /// Create a new reader.
@@ -34,16 +34,8 @@ impl Reader {
     where
         T: AsRef<Path> + Debug,
     {
-        let stat = std::fs::metadata(&file)
-            .with_context(|| format!("Failed to get metadata for {:?}", file))?;
-        let mut data = vec![];
-        data.reserve(stat.len() as usize + 1);
-
-        let mut f = File::open(&file).with_context(|| format!("Failed to open file {:?}", file))?;
-        f.read_to_end(&mut data)
-            .with_context(|| format!("Failed to read file {:?}", file))?;
-
-        Reader::parse(&data).with_context(|| format!("Failed to parse file {:?}", file))
+        let data = Self::open(file)?;
+        Self::parse(&data)
     }
 
     /// Parser for chain files.
@@ -126,5 +118,61 @@ impl Reader {
     /// ```
     pub fn from_bytes(data: &[u8]) -> Result<FxHashMap<u32, Chain>> {
         Reader::parse(data)
+    }
+
+    /// Create a new reader from a binary file.
+    ///
+    /// # Arguments
+    /// * `bin` - A path to a binary file.
+    ///
+    /// # Returns
+    /// A `Result` containing a `FxHashMap` of `Chain` objects.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use chainder as chain;
+    ///
+    /// let data = chain::Reader::from_bin("/path/to/binfile")?;
+    /// ```
+    pub fn from_bin<T>(bin: T) -> Result<FxHashMap<u32, Chain>>
+    where
+        T: AsRef<Path> + Debug,
+    {
+        let data = Self::open(bin)?;
+        let decoded: FxHashMap<u32, Chain> =
+            bincode::deserialize(&data).with_context(|| "Deserialization failed")?;
+        Ok(decoded)
+    }
+
+    /// Private opener for files.
+    ///
+    /// # Arguments
+    /// * `file` - A path to a file.
+    ///
+    /// # Returns
+    /// A `Result` containing a `Vec` of bytes.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use chainder as chain;
+    ///
+    /// let data = chain::Reader::open("/path/to/file")?;
+    /// ```
+    fn open<T>(file: T) -> Result<Vec<u8>>
+    where
+        T: AsRef<Path> + Debug,
+    {
+        let stat = std::fs::metadata(&file)
+            .with_context(|| format!("Failed to get metadata for {:?}", file))?;
+        let mut data = vec![];
+        data.reserve(stat.len() as usize + 1);
+
+        let mut f = File::open(&file).with_context(|| format!("Failed to open file {:?}", file))?;
+        f.read_to_end(&mut data)
+            .with_context(|| format!("Failed to read file {:?}", file))?;
+
+        Ok(data)
     }
 }
