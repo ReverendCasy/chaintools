@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use flate2::read::MultiGzDecoder;
 use fxhash::FxHashMap;
 use memchr::memchr;
 use rayon::prelude::*;
@@ -6,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, fs::File, io::Read, path::Path};
 
 use crate::chain::Chain;
+use crate::chainmap::ChainMap;
 
 /// A reader for chain files.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -30,7 +32,7 @@ impl Reader {
     ///
     /// let data = chain::Reader::from_file("/path/to/chainfile")?;
     /// ```
-    pub fn from_file<T>(file: T) -> Result<FxHashMap<u32, Chain>>
+    pub fn from_file<T>(file: T) -> Result<ChainMap>
     where
         T: AsRef<Path> + Debug,
     {
@@ -53,7 +55,7 @@ impl Reader {
     ///
     /// let data = chain::Reader::parse(&data)?;
     /// ```
-    pub fn parse(data: &[u8]) -> Result<FxHashMap<u32, Chain>> {
+    pub fn parse(data: &[u8]) -> Result<ChainMap> {
         let mut vacc: Vec<(&[u8], &[u8])> = Vec::new();
         let mut data = &data[..];
         loop {
@@ -77,7 +79,7 @@ impl Reader {
 
         let chainfile = vacc
             .par_iter()
-            .filter_map(|(header, block)| Chain::from(header, block))
+            .filter_map(|(header, block)| Chain::from(header, block).ok())
             .fold(
                 || FxHashMap::default(),
                 |mut acc, chain| {
@@ -93,7 +95,7 @@ impl Reader {
                 },
             );
 
-        Ok(chainfile)
+        Ok(ChainMap { map: chainfile })
     }
 
     /// Create a new reader from a byte slice.
@@ -116,7 +118,7 @@ impl Reader {
     ///
     /// assert_eq!(data.len(), 1);
     /// ```
-    pub fn from_bytes(data: &[u8]) -> Result<FxHashMap<u32, Chain>> {
+    pub fn from_bytes(data: &[u8]) -> Result<ChainMap> {
         Reader::parse(data)
     }
 
@@ -135,14 +137,40 @@ impl Reader {
     ///
     /// let data = chain::Reader::from_bin("/path/to/binfile")?;
     /// ```
-    pub fn from_bin<T>(bin: T) -> Result<FxHashMap<u32, Chain>>
+    pub fn from_bin<T>(bin: T) -> Result<ChainMap>
     where
         T: AsRef<Path> + Debug,
     {
         let data = Self::open(bin)?;
-        let decoded: FxHashMap<u32, Chain> =
+        let decoded: ChainMap =
             bincode::deserialize(&data).with_context(|| "Deserialization failed")?;
         Ok(decoded)
+    }
+
+    /// Load a single chain from a binary file.
+    ///
+    /// # Arguments
+    /// * `id` - A chain id.
+    /// * `bin` - A path to a binary file.
+    ///
+    /// # Returns
+    /// A `Result` containing a `Chain` object.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use chainder as chain;
+    ///
+    /// let data = chain::Reader::load_chain(&123, "/path/to/binfile")?;
+    /// ```
+    pub fn load_chain<T>(id: u32, bin: T) -> Result<Chain>
+    where
+        T: AsRef<Path> + Debug,
+    {
+        let data = Self::open(bin)?;
+        let decoded: ChainMap =
+            bincode::deserialize(&data).with_context(|| "Deserialization failed")?;
+        Ok(decoded.get(&id).expect("Failed to get chain").clone())
     }
 
     /// Private opener for files.
@@ -170,8 +198,16 @@ impl Reader {
         data.reserve(stat.len() as usize + 1);
 
         let mut f = File::open(&file).with_context(|| format!("Failed to open file {:?}", file))?;
-        f.read_to_end(&mut data)
-            .with_context(|| format!("Failed to read file {:?}", file))?;
+
+        if file.as_ref().extension().unwrap() == "gz" {
+            let mut decoder = MultiGzDecoder::new(f);
+            decoder
+                .read_to_end(&mut data)
+                .with_context(|| format!("Failed to read file {:?}", file))?;
+        } else {
+            f.read_to_end(&mut data)
+                .with_context(|| format!("Failed to read file {:?}", file))?;
+        }
 
         Ok(data)
     }
