@@ -4,10 +4,18 @@
   </h1>
 
   <p align="center">
-    ![version-badge](https://img.shields.io/badge/version-0.1.0dev-green)
-    ![Crates.io](https://img.shields.io/crates/v/chaintools)
-    ![GitHub](https://img.shields.io/github/license/alejandrogzi/chaintools?color=blue)
-    ![Crates.io Total Downloads](https://img.shields.io/crates/d/chaintools)
+    <a href="https://img.shields.io/badge/version-0.1.0dev-green" target="_blank">
+      <img alt="Version Badge" src="https://img.shields.io/badge/version-0.1.0dev-green">
+    </a>
+    <a href="https://crates.io/crates/chaintools" target="_blank">
+      <img alt="Crates.io Version" src="https://img.shields.io/crates/v/chaintools">
+    </a>
+    <a href="https://github.com/alejandrogzi/chaintools" target="_blank">
+      <img alt="GitHub License" src="https://img.shields.io/github/license/alejandrogzi/chaintools?color=blue">
+    </a>
+    <a href="https://crates.io/crates/chaintools" target="_blank">
+      <img alt="Crates.io Total Downloads" src="https://img.shields.io/crates/d/chaintools">
+    </a>
   </p>
 
 
@@ -25,5 +33,5 @@ To include this crate in your project just do:
 cargo add chaintools
 ```
 
-[!WARNING]
+![WARNING]
 This project is currently under active development and most of its intended features may or may not be available at the time.
