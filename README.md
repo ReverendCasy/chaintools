@@ -33,5 +33,5 @@ To include this crate in your project just do:
 cargo add chaintools
 ```
 
-![WARNING]
-This project is currently under active development and most of its intended features may or may not be available at the time.
+> [!WARNING]
+> This project is currently under active development and most of its intended features may or may not be available at the time.
