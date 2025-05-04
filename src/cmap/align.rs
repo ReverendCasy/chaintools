@@ -203,7 +203,7 @@ impl AlignmentRecord {
             let Some(sep) = memchr(b'\t', align) else {
                 if align.len() < 2 {
                     break;
-                }
+                } // YM: Does this mean that the last block does not get recorded?
 
                 let end = memchr(b'\n', &align[..]).with_context(|| {
                     format!(

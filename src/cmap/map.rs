@@ -286,7 +286,7 @@ impl ChainMap {
     /// let score = 1000;
     /// let filt_chains = chains.filter_by_score(score);
     /// ```
-    pub fn filter_by_score(&self, score: i64) -> Self {
+    pub fn filter_by_score(&self, score: u64) -> Self {
         let map = self
             .map
             .par_iter()

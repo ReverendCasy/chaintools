@@ -1,19 +1,40 @@
 use anyhow::{Context, Result};
+use fxhash::FxHashMap;
 use memchr::memchr;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
+// use std::mem;
 use std::str::from_utf8;
 
 use crate::cmap::align::AlignmentRecord;
 
+/// YM - Current issues
+/// 
+/// 1) Are u64 values really needed for size/coordinate specifiers or is it a bit of an overkill?
+
 /// A discrete representation of a genomic chain.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Chain {
-    pub score: i64,
+    pub score: u64,
     pub refs: ChainHead,
     pub query: ChainHead,
     pub alignment: Vec<AlignmentRecord>,
     pub id: u32,
+}
+
+/// [YM] A structure to represent alignment records as tuples of genomic coordinates
+#[derive(Clone, Debug)]
+pub enum ChainBlock {
+    OneSided { id: String, start: u64, end: u64 },
+    DoubleSided { id: String, r_start: u64, r_end: u64, q_start: u64, q_end: u64 }
+}
+ 
+
+/// [YM] An enum specifying for which assemblies block coordinates should be extracted
+pub enum BlockSide {
+    Ref,
+    Query,
+    Both
 }
 
 impl Chain {
@@ -299,7 +320,7 @@ impl Chain {
     /// > (4900, ChainHead { chr: "chrY", size: 58368225, strand: '+', start: 25985403, end: 25985638 },
     /// ChainHead { chr: "chr5", size: 151006098, strand: '-', start: 43257292, end: 43257528 }, 1);
     /// ```
-    pub fn head(header: &[u8]) -> Result<(i64, ChainHead, ChainHead, u32)> {
+    pub fn head(header: &[u8]) -> Result<(u64, ChainHead, ChainHead, u32)> {
         let mut acc = vec![];
         let mut header = &header[..];
         loop {
@@ -316,7 +337,7 @@ impl Chain {
 
         let score = from_utf8(&acc[1])
             .unwrap()
-            .parse::<i64>()
+            .parse::<u64>()
             .with_context(|| {
                 format!(
                     "Failed to parse score in: {:?}. Bad formatted line!",
@@ -335,6 +356,293 @@ impl Chain {
             })?;
 
         Ok((score, refs, query, id))
+    }
+
+    /// [YM]
+    /// Convert the chain into a vector of chain blocks
+    /// 
+    /// # Arguments
+    /// * `self` - A Chain object
+    /// 
+    /// # Returns
+    /// 
+    /// * Vector<ChainBlock>
+    /// 
+    /// # Example
+    /// 
+    /// ```
+    /// use chaintools as chain;
+    /// 
+    /// let data = chain::Reader::from_file("/path/to/chainfile")?;
+    /// ```
+    /// 
+    /// TODO: 
+    /// Implement as a mpsc channel that yields the blocks instead of returning the whole vector
+    pub fn to_blocks(&self, side: BlockSide, report_gaps: bool) -> Vec<ChainBlock> {
+        let mut r_start: u64 = self.refs.start;
+        let q_strand: bool = self.query.strand == '+';
+        let mut q_start: u64 = match q_strand {
+            true => self.query.start,
+            false => self.query.size - self.query.start
+        };
+        let mut block_num: u32 = 1;
+        let mut blocks: Vec<ChainBlock> = Vec::new();
+        let mut q_block_start: u64;
+        let mut q_block_end: u64;
+        // iterate over alignment records
+        for b in &self.alignment {
+            // the reported data structure depends on the 'side' argument value
+            let mut r_block_end: u64 = r_start + (b.size as u64);
+            if q_strand {
+                q_block_start = q_start;
+                q_block_end = q_block_start + (b.size as u64);
+            } else {
+                q_block_start = q_start - (b.size as u64);
+                q_block_end = q_start;
+            }
+            let block: ChainBlock = match side {
+                // report only the reference coordinates
+                BlockSide::Ref => {
+                    ChainBlock::OneSided{id: block_num.to_string(), start: r_start, end: r_block_end}
+                },
+                BlockSide::Query => {
+                    ChainBlock::OneSided{id: block_num.to_string(), start: q_block_start, end: q_block_end}
+                },
+                BlockSide::Both => {
+                    ChainBlock::DoubleSided { id: block_num.to_string(), r_start: r_start, r_end: r_block_end, q_start: q_block_start, q_end: q_block_end }
+                }
+            };
+            blocks.push(block);
+            // r_start += (b.size + b.dt) as u64;
+            // q_start = if q_strand {q_start + b.size as u64} else {q_start - b.size as u64};
+            // r_start += b.dt as u64;
+            // q_start = if q_strand {q_start + (b.dq + b.size) as u64} else {q_start - (b.dq + b.size) as u64};
+            r_start += b.size as u64;
+            q_start = if q_strand {q_start + b.size as u64} else {q_start - b.size as u64};
+            // if chain gap blocks were requested and the first coding block has been passed,
+            // add a gap object
+            if report_gaps && !(b.dq == 0 && b.dq == 0) {
+                let gap_name: String = format!("{}_{}", block_num, block_num + 1);
+                r_block_end = r_start + b.dt as u64;
+                if q_strand {
+                    q_block_start = q_start;
+                    q_block_end = q_block_start + (b.dq as u64);
+                } else {
+                    q_block_start = q_start - (b.dq as u64);
+                    q_block_end = q_start;
+                }
+                let block: ChainBlock = match side {
+                    BlockSide::Ref => {
+                        ChainBlock::OneSided { id: gap_name, start: r_start, end: r_block_end }
+                    },
+                    BlockSide::Query => {
+                        ChainBlock::OneSided { id: gap_name, start: q_block_start, end: q_block_end }
+                    },
+                    BlockSide::Both => {
+                        ChainBlock::DoubleSided { 
+                            id: gap_name, r_start: r_start, r_end: r_block_end, q_start: q_block_start, q_end: q_block_end 
+                        }
+                    }
+                };
+                blocks.push(block);
+            }
+            r_start += b.dt as u64;
+            q_start = if q_strand {q_start + b.dq as u64} else {q_start - b.dq as u64};
+            block_num += 1;
+        }
+        blocks
+    }
+
+    /// [YM] + NOT FINISHED
+    /// Maps coordinates from reference to query
+    /// 
+    /// # Arguments
+    /// 
+    /// `intervals` - A collection of objects having "start" and "end" coordinates; using tuples for now
+    /// TODO: Define valid types 
+    /// 
+    /// `abs_threshold` - An absolute value by which an unaligned coordinated can be extrapolated
+    /// 
+    /// `rel_threshold` - A multiplier of an interval's length specifying the relative threshold of extrapolation
+    pub fn map_through(
+        &self, 
+        intervals: &mut Vec<(&str, u64, u64, &str)>,
+        abs_threshold: u64,
+        rel_threshold: f64
+) -> FxHashMap<&str, (u64, u64)> {
+        let output: FxHashMap<&str, (u64, u64)> = FxHashMap::default();
+        intervals.sort_by(
+        |a, b| if a.1 == b.1 {
+            a.2.cmp(&b.2)
+        } else {
+            a.1.cmp(&b.1)
+        }
+        );
+        let mut min_start: u64 = intervals[0].1;
+        let mut max_end: u64 = intervals[intervals.len()].2; // will this panic??
+        // create a smart iteration index; iteration will always start from this interval
+        let mut curr: usize = 0;
+        // record the current interval's end coordinate; this will ensure that the iterator will never
+        // skip the nested intervals
+        let mut curr_end: u64 = intervals[0].2;
+        // create a hash map of relative length threshold; for long interval lists 
+        // retrieving those from an array might be faster than calculating them every time anew
+        let mut rel_sizes: FxHashMap<&str, u64> = FxHashMap::default();
+
+        // define whether alignment is codirected between reference in query
+        // for now we assume that chains always represent the positive strand in the reference sequence
+        // this means, 'codirectionality' depends on the query strand alone
+        let codirected: bool = &self.query.strand == &'+';
+
+        // initialize the variables standig for block coordinates
+        // (see TODO tho)
+        // 
+        let mut r_start: u64 = self.refs.start;
+        let q_strand: bool = self.query.strand == '+';
+        let mut q_start: u64 = match q_strand {
+            true => self.query.start,
+            false => self.query.size - self.query.start
+        };
+        let mut q_block_start: u64;
+        let mut q_block_end: u64;
+
+        // finally, initialize the projected coordinate variables
+        let mut start_p: u64 = 0;
+        let mut end_p: u64 = 0;
+
+        // all set
+        // now, iterate over alignment records
+        // TODO: Implement to_blocks() as yielder to avoid code repetition
+        for b in &self.alignment {
+            // break if the iterator has passed beyond the last interval
+            if r_start > max_end {break};
+            let mut r_block_end: u64 = r_start + (b.size as u64);
+            // skip the block preceding the first interval's start in the reference
+            if r_block_end < min_start {continue};
+            // define the query coordinates
+            if q_strand {
+                q_block_start = q_start;
+                q_block_end = q_block_start + (b.size as u64);
+            } else {
+                q_block_start = q_start - (b.size as u64);
+                q_block_end = q_start;
+            }
+
+            // now, we have a chain block with defined boundaries in both reference and query
+            // iteratve over the intervals, chek whether any of their coordinates can be projected 
+            // through this block
+            for (i, inter) in intervals[curr..].iter().enumerate() {
+                // check whether the start coorindate is within the interval
+                if (r_start <= inter.1) && (inter.1 <= r_block_end) {
+                    let offset: u64 = inter.1 - r_start;
+                    if codirected{
+                        start_p = q_block_start + offset;
+                        // assign to a storage variable
+                    } else {
+                        end_p = q_block_end - offset;
+                        // assign to a storage variable
+                    }
+                }
+                // then, check the end coordinate
+                if (r_start <= inter.2) && (inter.2 <= r_block_end) {
+                    let offset: u64 = r_block_end - inter.2;
+                    if codirected {
+                        end_p = q_block_end - offset;
+                        // assign to a storage variable
+                    } else {
+                        start_p = q_block_start + offset;
+                        // assign to a storage variable
+                    }
+                }
+                // if an interval has bots its coordinates properly mapped,
+                // update the current transcript pointer
+            }
+
+            // update the block coordinates
+            r_start += b.size as u64;
+            q_start = if q_strand {q_start + b.size as u64} else {q_start - b.size as u64};
+            // now, process the alignment gap
+            // somewhat less trivial than mapping through an aligned block 
+            r_block_end = r_start + b.dt as u64;
+            if q_strand {
+                q_block_start = q_start;
+                q_block_end = q_block_start + (b.dq as u64);
+            } else {
+                q_block_start = q_start - (b.dq as u64);
+                q_block_end = q_start;
+            }
+            // now, iterate through the remaining intervals again
+            for (i, inter) in intervals[curr..].iter().enumerate() {
+                // start coordinate is within the alignment gap
+                if (r_start <= inter.1) && (inter.1 <= r_block_end) {
+                    // get the alignment offset
+                    let offset: u64 = inter.1 - r_start;
+                    // get the relative threshold size
+                    let rel_thresh: &u64 = rel_sizes
+                        .entry(inter.3)
+                        .or_insert((inter.2 - inter.1) * rel_threshold as u64);
+
+                    // check if the offset is within the stated extrapolation limits 
+                    if offset > abs_threshold && offset > *rel_thresh {
+                        // coordinate is too far to be extrapolated; crop to the chain block's start
+                        if codirected {
+                            start_p = q_block_start;
+                            // assign to a storage variable
+                        } else {
+                            end_p = q_block_end;
+                            // assign to a storage variable
+                        }
+                    } else {
+                        // extrapolated sequence's length does not exceed the stated thresholds
+                        if codirected {
+                            start_p = q_block_start + offset;
+                            // assign to a storage variable
+                        } else {
+                            end_p = q_block_end - offset;
+                            // assign to a storage variable
+                        }
+                    }
+                }
+
+                // and the same for end coordinate
+                if (r_start <= inter.2) && (inter.2 <= r_block_end) {
+                    // get the alignment offset
+                    let offset: u64 = r_block_end - inter.2;
+                    // get the relative threshold size
+                    let rel_thresh: &u64 = rel_sizes
+                        .entry(inter.3)
+                        .or_insert((inter.2 - inter.1) * rel_threshold as u64);
+                    
+                    // check if the offset is within the stated extrapolation limits 
+                    if offset > abs_threshold && offset > *rel_thresh {
+                        // coordinate is too far to be extrapolated; crop to the chain block's start
+                        if codirected {
+                            end_p = q_block_end;
+                            // assign to a storage variable
+                        } else {
+                            start_p = q_block_start;
+                            // assign to a storage variable
+                        }
+                    } else {
+                        // extrapolated sequence's length does not exceed the stated thresholds
+                        if codirected {
+                            end_p = q_block_end - offset;
+                            // assign to a storage variable
+                        } else {
+                            start_p = q_block_start + offset;
+                            // assign to a storage variable
+                        }
+                    }
+                    // end coordinate has been mapped accordingly
+                    // current interval pointer can be updated
+                }
+            }
+
+            // proceed to the next line
+            r_start += b.dt as u64;
+            q_start = if q_strand {q_start + b.dq as u64} else {q_start - b.dq as u64};
+        }
+        output
     }
 }
 

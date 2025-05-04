@@ -77,6 +77,7 @@
 #![warn(rust_2018_idioms)]
 
 pub mod cmap;
-mod io;
+pub mod io;
 
-pub use io::*;
+pub use crate::io::*;
+pub use crate::cmap::*;

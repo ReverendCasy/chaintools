@@ -1,13 +1,16 @@
 use anyhow::{Context, Result};
 use flate2::read::MultiGzDecoder;
 use fxhash::FxHashMap;
-use memchr::memchr;
+use memchr::{memchr, memrchr};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::{fmt::Debug, fs::File, io::Read, path::Path};
+// use std::borrow::Cow;
+// use std::ops::RangeBounds;
+use std::{fmt::{Debug, Display}, fs::File, io::{BufRead, BufReader, Read, Seek, SeekFrom}, path::Path};
 
 use crate::cmap::chain::Chain;
 use crate::cmap::map::ChainMap;
+// use crate::io::indexer::BinaryIndex;
 
 /// A reader for chain files.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -210,5 +213,141 @@ impl Reader {
         }
 
         Ok(data)
+    }
+
+    /// Extract selected chains from the binary vector
+    /// 
+    /// # Arguments
+    /// * `file` - A path to the chain file 
+    /// 
+    /// * `chains` - a vector of string literals containing the chain IDs to extract
+    pub fn extract<U>(file: U, chains: Vec<&str>) -> Result<ChainMap> 
+    where 
+        U: AsRef<Path> + Debug,
+        // T:  IntoIterator + RangeBounds<str>,
+        // T::IntoIter: ExactSizeIterator
+    {
+        let mut chainmap: FxHashMap<u32, Chain> = FxHashMap::default();
+        if chains.len() == 0 {
+            return Ok(ChainMap { map: chainmap });
+        }
+        let data: Vec<u8>  = Self::open(file)?;
+        let mut data = &data[..];
+        loop {
+            let sep = memchr(b'\n', &data).with_context(|| {
+                format!(
+                    "Failed to find separator in: {:?}. Bad formatted line!",
+                    String::from_utf8_lossy(data)
+                )
+            })?;
+
+            let Some(end) = memchr(b'c', &data[sep..]) else {
+                let header = &data[..sep];
+                let id_field: usize = memrchr(b' ', header).with_context(|| {
+                    format!(
+                        "Improperly formatted header line: {:?} !",
+                        String::from_utf8_lossy(header)
+                    )
+                }
+                )?;
+                let id_str = std::str::from_utf8(&header[id_field+1..])?;
+                if chains.contains(&id_str) {
+                    let block = &data[sep + 1..];
+                    let (chain_id, chain_obj) = Chain::from(header, block).unwrap();
+                    chainmap.insert(chain_id, chain_obj);
+                } 
+                break;
+            };
+            let header = &data[..sep];
+            let id_field: usize = memrchr(b' ', header).with_context(|| {
+                format!(
+                    "Improperly formatted header line: {:?} !",
+                    String::from_utf8_lossy(header)
+                )
+            }
+            )?;
+            let id_str: &str = std::str::from_utf8(&header[id_field+1..])?;
+            // add the chain if its ID is in the requested chains vector
+            if chains.contains(&id_str) {
+                let block = &data[sep + 1..sep + end - 1];
+                let (chain_id, chain_obj) = Chain::from(header, block).unwrap();
+                chainmap.insert(chain_id, chain_obj);
+                // break once all the chains were extracted
+                // TODO: Check for duplicate elements in the chain ID vector??
+                if chainmap.len() == chains.len() {break};
+            } 
+            data = &data[sep + end..];
+        }
+        Ok(ChainMap { map: chainmap })
+    }
+
+    // Private function for index reading
+    //
+    // # Arguments
+    // 
+    // * `file` - an index file
+    fn read_index<U>(file: U, chains: &Vec<u64>) -> Result<FxHashMap<u64, (u64, u64)>>
+    where
+        U: AsRef<Path> + Debug + Display
+    {
+        let mut index: FxHashMap<u64, (u64, u64)> = FxHashMap::default();
+        let f = File::open(file)?;
+        let buf = BufReader::new(f).lines();
+        for line in buf.map_while(Result::ok) {
+            let line_data: Vec<u64> = line.split('\t')
+                .map(|x|
+                    x.parse::<u64>().expect("Invalid numeric value found in the index file")
+                )
+                .collect::<Vec<u64>>();
+            if chains.contains(&line_data[0]){
+                index.insert(line_data[0], (line_data[1], line_data[2]));
+            }
+            if index.len() == chains.len() {break}
+        }
+        Ok(index)
+    }
+
+    /// Extract selected chains from an indexed file
+    /// 
+    /// # Arguments
+    /// 
+    /// 
+    /// 
+    pub fn extract_ix<U>(file: U, chains: Vec<u64>) -> Result<ChainMap>
+    where
+        U: AsRef<Path> + Debug + Display
+    {
+        let mut chainmap: FxHashMap<u32, Chain> = FxHashMap::default();
+        if chains.len() == 0 {return Ok(ChainMap{ map: chainmap })}
+        let index_file: String = format!("{}.ix", &file);
+        // let index: FxHashMap<u64, (usize, usize)> = BinaryIndex::read_index(index_file)?;
+        let index: FxHashMap<u64, (u64, u64)> = Self::read_index(index_file, &chains)?;
+
+        let mut f = File::open(file)?;
+        for chain_id in chains {
+            // get chain coordinates, panic if the chain Id is missing from the index file
+            let (start, end) = match index.get(&chain_id) {
+                Some(x) => {(x.0 as u64, x.1 as u64)},
+                None => {
+                    panic!("Chain {} was not found in the index file", chain_id)
+                }
+            };
+            // extract the chain bytes
+            f.seek(SeekFrom::Start(start))?;
+            let mut chain_string = vec![0; (end-start) as usize];
+            f.read(&mut chain_string[..])?;
+            // split chain into body and header
+            let header_pos = memchr(b'\n', &chain_string).with_context(|| {
+                format!(
+                    "Failed to find newline separator in: {:?}",
+                    String::from_utf8_lossy(&chain_string)
+                )
+            })?;
+            let header: &[u8] = &chain_string[..header_pos];
+            let block: &[u8] = &chain_string[header_pos+1..];
+            let (id, chain) = Chain::from(header, block)?;
+            chainmap.insert(id, chain);
+        }
+        Ok(ChainMap{ map: chainmap } )
     }
 }
