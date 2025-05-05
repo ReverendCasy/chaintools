@@ -1,4 +1,7 @@
+use anyhow::Context;
 use chaintools as chain;
+use cubiculum::structs::structs::Interval;
+use fxhash::FxHashMap;
 use std::process;
 
 fn main() {
@@ -27,7 +30,7 @@ fn main() {
     println!("--------------------------------------------------\n");
 
     println!("Index-based extraction test");
-    let chains_to_extract: Vec<u64> = vec![1043255, 1043256];
+    let chains_to_extract: Vec<u64> = vec![38, 1043255, 1043256];
     let extracted_by_index: chain::map::ChainMap = chain::reader::Reader::extract_ix(file, chains_to_extract).unwrap_or_else(|err|
         {
             panic!("Index-based extraction failed!: {:?}", err);
@@ -39,5 +42,19 @@ fn main() {
         .map[&1043255]
         .to_blocks(mode, true);
     println!("Blocks: {:#?}", blocks);
+
+    println!("Projecting coordinates");
+    let mut vec_to_map: Vec<Interval> = vec![
+        Interval::new()
+    ];
+    vec_to_map[0].update_name(String::from("ENST00000358005.7#CCDC32"));
+    vec_to_map[0].update_chrom(String::from("chr15"));
+    vec_to_map[0].update_start(40553970);
+    vec_to_map[0].update_end(40554127);
+    let mapped_coords: FxHashMap<&str, Interval> = extracted_by_index
+        .map[&38]
+        .map_through(&mut vec_to_map, 3000, 2.5)
+        .expect("Failed mapping coordinates");
+    println!("Mapped coordinates: {:#?}", mapped_coords);
 
 }
