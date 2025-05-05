@@ -1,3 +1,6 @@
-/src/main.rs
+/
+src/main.rs
+src/cmap/mpsc_test.rs
 target
-tests/
+tests
+/

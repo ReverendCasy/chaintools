@@ -30,7 +30,7 @@ fn main() {
     println!("--------------------------------------------------\n");
 
     println!("Index-based extraction test");
-    let chains_to_extract: Vec<u64> = vec![38, 1043255, 1043256];
+    let chains_to_extract: Vec<u64> = vec![12, 38, 687002, 1043255, 1043256];
     let extracted_by_index: chain::map::ChainMap = chain::reader::Reader::extract_ix(file, chains_to_extract).unwrap_or_else(|err|
         {
             panic!("Index-based extraction failed!: {:?}", err);
@@ -56,5 +56,70 @@ fn main() {
         .map_through(&mut vec_to_map, 3000, 2.5)
         .expect("Failed mapping coordinates");
     println!("Mapped coordinates: {:#?}", mapped_coords);
+
+    println!("Projecting a block protruding beyond the chain");
+    let mut vec_to_map: Vec<Interval> = vec![
+        Interval::new()
+    ];
+    vec_to_map[0].update_name(String::from("ENST00000216338.9#GZMH_utr2"));
+    vec_to_map[0].update_chrom(String::from("chr14"));
+    vec_to_map[0].update_start(24606479);
+    vec_to_map[0].update_end(24606602);
+    let mapped_coords: FxHashMap<&str, Interval> = extracted_by_index
+        .map[&687002]
+        .map_through(&mut vec_to_map, 3000, 2.5)
+        .expect("Failed mapping coordinates");
+    println!("Mapped coordinates for ENST00000216338.9#GZMH_utr2: {:#?}", mapped_coords);
+
+    println!("Projecting a block partially covered by double-sided gap");
+    let mut vec_to_map: Vec<Interval> = vec![
+        Interval::new()
+    ];
+    vec_to_map[0].update_name(String::from("ENST00000693548.1#MYH15_partial_dside_gap"));
+    vec_to_map[0].update_chrom(String::from("chr3"));
+    vec_to_map[0].update_start(108454005);
+    vec_to_map[0].update_end(108454142);
+    let mapped_coords: FxHashMap<&str, Interval> = extracted_by_index
+        .map[&12]
+        .map_through(&mut vec_to_map, 3000, 2.5)
+        .expect("Failed mapping coordinates");
+    println!("ENST00000693548.1#MYH15_partial_dside_gap: {:#?}", mapped_coords);
+
+
+    println!("Checking intersection functionality");
+    let mut vec_for_cov: Vec<Interval> = vec![
+        Interval::new(),
+        Interval::new(),
+        Interval::new(),
+        Interval::new(),
+        Interval::new()
+    ];
+    vec_for_cov[0].update_chrom(String::from("chr14"));
+    vec_for_cov[0].update_start(24606602);
+    vec_for_cov[0].update_end(24606746);
+    vec_for_cov[0].update_name(String::from("ENST00000216338.9#GZMH_1"));
+    vec_for_cov[1].update_chrom(String::from("chr14"));
+    vec_for_cov[1].update_start(24607148);
+    vec_for_cov[1].update_end(24607406);
+    vec_for_cov[1].update_name(String::from("ENST00000216338.9#GZMH_2"));
+    vec_for_cov[2].update_chrom(String::from("chr14"));
+    vec_for_cov[2].update_start(24607611);
+    vec_for_cov[2].update_end(24607747);
+    vec_for_cov[2].update_name(String::from("ENST00000216338.9#GZMH_3"));
+    vec_for_cov[3].update_chrom(String::from("chr14"));
+    vec_for_cov[3].update_start(24608264);
+    vec_for_cov[3].update_end(24608412);
+    vec_for_cov[3].update_name(String::from("ENST00000216338.9#GZMH_4"));
+    vec_for_cov[4].update_chrom(String::from("chr14"));
+    vec_for_cov[4].update_start(24609558);
+    vec_for_cov[4].update_end(24609613);
+    vec_for_cov[4].update_name(String::from("ENST00000216338.9#GZMH_5"));
+    println!("vec_for_cov={:?}", vec_for_cov);
+
+    let coverage: FxHashMap<&str, u64> = extracted_by_index
+        .map[&687002]
+        .alignment_cov(&mut vec_for_cov)
+        .expect("Failed calculating alignment coverage");
+    println!("Exon coverage for ENST00000216338.9#GZMH_utr2: {:#?}", coverage);
 
 }
