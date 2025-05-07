@@ -287,15 +287,11 @@ impl Reader {
     // 
     // * `file` - an index file
     // * ``
-    fn read_index<U>(file: U, chains: Option<&Vec<u64>>) -> Result<FxHashMap<u64, (u64, u64)>>
+    fn read_index<U>(file: U, chains: &Vec<u64>, all: bool) -> Result<FxHashMap<u64, (u64, u64)>>
     where
         U: AsRef<Path> + Debug + Display
     {
         let mut index: FxHashMap<u64, (u64, u64)> = FxHashMap::default();
-        let (chains, all) = match chains {
-            Some(x) => {(x, false)},
-            None => {(&Vec::<u64>::new(), true)}
-        };
         let f = File::open(file)?;
         let buf = BufReader::new(f).lines();
         for line in buf.map_while(Result::ok) {
@@ -330,7 +326,7 @@ impl Reader {
         // if chains.len() == 0 && !all {return Ok(ChainMap{ map: chainmap })}
         let index_file: String = format!("{}.ix", &file);
         // let index: FxHashMap<u64, (usize, usize)> = BinaryIndex::read_index(index_file)?;
-        let index: FxHashMap<u64, (u64, u64)> = Self::read_index(index_file, Some(&chains))?;
+        let index: FxHashMap<u64, (u64, u64)> = Self::read_index(index_file, &chains, all)?;
 
         let mut f = File::open(file)?;
         for chain_id in chains {
