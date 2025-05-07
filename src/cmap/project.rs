@@ -366,7 +366,6 @@ impl crate::cmap::chain::Chain {
             if b_r_start > max_end {break};
             // skip the block preceding the first interval's start in the reference
             if b_r_end < min_start {
-                
                 continue
             };
 
@@ -1355,6 +1354,9 @@ impl crate::cmap::chain::Chain {
         // now go
         for (h, b) in self.alignment.iter().enumerate() {
             r_block_end = r_start + b.size as u64;
+            // continue if the first interval has not yet been reached, break if the last one has been passed
+            if r_block_end < min_start {continue};
+            if r_start > max_end {break};
             for (mut i, inter) in intervals.iter().enumerate() {
                 i += curr;
                 let inter_start: u64 = *inter.start().with_context(||
