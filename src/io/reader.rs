@@ -318,7 +318,7 @@ impl Reader {
         U: AsRef<Path> + Debug + Display
     {
         let mut chainmap: FxHashMap<u32, Chain> = FxHashMap::default();
-        if chains.len() == 0 {return Ok(ChainMap{ map: chainmap })}
+        if chains.len() == 0 && !all {return Ok(ChainMap{ map: chainmap })}
         let index_file: String = format!("{}.ix", &file);
         // let index: FxHashMap<u64, (usize, usize)> = BinaryIndex::read_index(index_file)?;
         let index: FxHashMap<u64, (u64, u64)> = Self::read_index(index_file, &chains, all)?;
