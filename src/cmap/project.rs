@@ -30,12 +30,12 @@ impl crate::cmap::chain::Chain {
             if self.query.strand == '+' {&self.query.end} else {&(self.query.size - self.query.start)}
         };
         for i in intervals {
-            let inter_start = match i.end() {
+            let inter_start = match i.start() {
                 Some(x) => {x},
                 None => continue
             };
             if inter_start > end {break}
-            let inter_end = match i.start() {
+            let inter_end = match i.end() {
                 Some(x) => {x},
                 None => continue
             };
