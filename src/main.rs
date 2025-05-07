@@ -32,7 +32,7 @@ fn main() {
 
     println!("Index-based extraction test");
     let chains_to_extract: Vec<u64> = vec![12, 38, 687002, 1043255, 1043256];
-    let extracted_by_index: chain::map::ChainMap = chain::reader::Reader::extract_ix(file, chains_to_extract, false).unwrap_or_else(|err|
+    let extracted_by_index: chain::map::ChainMap = chain::reader::Reader::extract_ix(file, Some(chains_to_extract)).unwrap_or_else(|err|
         {
             panic!("Index-based extraction failed!: {:?}", err);
         }
