@@ -286,7 +286,7 @@ impl Reader {
     // # Arguments
     // 
     // * `file` - an index file
-    fn read_index<U>(file: U, chains: &Vec<u64>) -> Result<FxHashMap<u64, (u64, u64)>>
+    fn read_index<U>(file: U, chains: &Vec<u64>, all: bool) -> Result<FxHashMap<u64, (u64, u64)>>
     where
         U: AsRef<Path> + Debug + Display
     {
@@ -299,10 +299,10 @@ impl Reader {
                     x.parse::<u64>().expect("Invalid numeric value found in the index file")
                 )
                 .collect::<Vec<u64>>();
-            if chains.contains(&line_data[0]){
+            if chains.contains(&line_data[0]) || all {
                 index.insert(line_data[0], (line_data[1], line_data[2]));
             }
-            if index.len() == chains.len() {break}
+            if index.len() == chains.len() && !all {break}
         }
         Ok(index)
     }
@@ -313,7 +313,7 @@ impl Reader {
     /// 
     /// 
     /// 
-    pub fn extract_ix<U>(file: U, chains: Vec<u64>) -> Result<ChainMap>
+    pub fn extract_ix<U>(file: U, chains: Vec<u64>, all: bool) -> Result<ChainMap>
     where
         U: AsRef<Path> + Debug + Display
     {
@@ -321,7 +321,7 @@ impl Reader {
         if chains.len() == 0 {return Ok(ChainMap{ map: chainmap })}
         let index_file: String = format!("{}.ix", &file);
         // let index: FxHashMap<u64, (usize, usize)> = BinaryIndex::read_index(index_file)?;
-        let index: FxHashMap<u64, (u64, u64)> = Self::read_index(index_file, &chains)?;
+        let index: FxHashMap<u64, (u64, u64)> = Self::read_index(index_file, &chains, all)?;
 
         let mut f = File::open(file)?;
         for chain_id in chains {
