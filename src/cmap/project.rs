@@ -1,28 +1,50 @@
 use anyhow::{Context, Result};
+use cubiculum::merge::merge::intersection;
 use cubiculum::structs::structs::{Coordinates, Interval, Named};
 use fxhash::FxHashMap;
-use num_traits::CheckedSub;
-use std::cmp::{Ord, PartialOrd, min, max};
+use std::cmp::{Ord};
 use std::fmt::Debug;
-use std::ops::Sub;
 use yield_return::LocalIter;
 
 use crate::cmap::chain::{BlockSide, ChainBlock, DoubleSidedBlock, OneSidedBlock};
 
-
-// TODO: Move to `cubiculum`
-pub fn intersection<T>(
-    start1: T, end1: T, start2: T, end2: T
-) -> Option<T> 
-where T: Ord + PartialOrd + Sub<Output = T> + CheckedSub<Output = T>//<T: cmp::PartialOrd + ops::Sub<Output = T>>
-{
-    
-    let min_end: T = min(end1, end2); //if end1 > end2 { end2 } else { end1 };
-    let max_start: T = max(start1, start2); //if start1 > start2 { start1 } else { start2 };
-    min_end.checked_sub(&max_start)
-}
-
 impl crate::cmap::chain::Chain {
+    /// [YM] Given a vector of cubiculum Interval-like objects, returns a vector
+    /// of items overlapping the chain's span
+    /// 
+    /// # Arguments
+    /// `intervals`: A vector of interval objects 
+    /// `is_ref`: boolean value indicating whether reference coordinates should be used for the chain;
+    /// using query coordinates otherwise
+    /// 
+    /// 
+    pub fn intersect_to_vector<T>(&self, intervals: &Vec<T>, to_ref: bool) -> Vec<T>
+    where 
+            T: Coordinates + Named + Clone + Debug
+    {
+        let mut output: Vec<T> = Vec::<T>::new();
+        let start: &u64 = if to_ref {&self.refs.start} else {
+            if self.query.strand == '+' {&self.query.start} else {&(self.query.size - self.query.end)}
+        };
+        let end: &u64 = if to_ref {&self.refs.end} else {
+            if self.query.strand == '+' {&self.query.end} else {&(self.query.size - self.query.start)}
+        };
+        for i in intervals {
+            let inter_start = match i.end() {
+                Some(x) => {x},
+                None => continue
+            };
+            if inter_start > end {break}
+            let inter_end = match i.start() {
+                Some(x) => {x},
+                None => continue
+            };
+            if inter_end < start {continue};
+            output.push(i.clone());
+        }
+        output
+
+    }
     /// [YM - A first attempt at block yielder]
     /// A 'yielding' version of to_blocks() from cmap::chain; 
     /// returns blocks as a generator-like object of Futures;
@@ -167,7 +189,7 @@ impl crate::cmap::chain::Chain {
                 }
                 );
             // define the total span for the input intervals
-            let mut min_start: u64 = *intervals[0].start().with_context(||
+            let min_start: u64 = *intervals[0].start().with_context(||
                 {"Cannot assess coverage for intervals with undefined coordinates"}
             )?;
             let max_end: u64 = *intervals[intervals.len() - 1].end().with_context(||
@@ -193,6 +215,10 @@ impl crate::cmap::chain::Chain {
             for (h, b) in self.yield_blocks(BlockSide::Both, false).enumerate() {
                 let b_r_start = b.r_start().unwrap();
                 let b_r_end = b.r_end().unwrap();
+
+                // continue if the first interval has not yet been reached, break if the last one has been passed
+                if b_r_end < min_start {continue};
+                if b_r_start > max_end {break};
 
                 for (mut i, inter) in intervals.iter().enumerate() {
                     i += curr;
