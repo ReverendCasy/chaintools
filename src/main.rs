@@ -3,6 +3,7 @@ use chaintools as chain;
 use cubiculum::structs::structs::Interval;
 use fxhash::FxHashMap;
 use std::process;
+use std::time::Instant;
 
 fn main() {
     let file:  &str = "/beegfs/projects/project-ymalovichko/toga_extension/duplication_tracing/TOGA2.0_tests/TREE_TESTS/mm10_iqtree_all_50/tmp/input_data/genome_alignment.chain";
@@ -15,12 +16,12 @@ fn main() {
         }
     );
     println!("Keys: {:?}", chainmap.map.keys());
-    let mode: chain::cmap::chain::BlockSide = chain::cmap::chain::BlockSide::Both;
-    let blocks: Vec<chain::cmap::chain::ChainBlock> = chainmap
-        .map[&1043254]
-        .to_blocks(mode, false);
-    println!("Blocks: {:#?}", blocks);
-    println!("--------------------------------------------------\n");
+    // let mode: chain::cmap::chain::BlockSide = chain::cmap::chain::BlockSide::Both;
+    // let blocks: Vec<Box<dyn chain::cmap::chain::ChainBlock>> = chainmap
+    //     .map[&1043254]
+    //     .to_blocks(mode, false);
+    // println!("Blocks: {:#?}", blocks);
+    // println!("--------------------------------------------------\n");
 
     println!("Indexing test:");
     match chain::io::indexer::BinaryIndex::index(file) {
@@ -36,12 +37,12 @@ fn main() {
             panic!("Index-based extraction failed!: {:?}", err);
         }
     );
-    let mode: chain::cmap::chain::BlockSide = chain::cmap::chain::BlockSide::Both;
-    println!("{:#?}", extracted_by_index.map[&1043255].header());
-    let blocks: Vec<chain::cmap::chain::ChainBlock> = extracted_by_index
-        .map[&1043255]
-        .to_blocks(mode, true);
-    println!("Blocks: {:#?}", blocks);
+    // let mode: chain::cmap::chain::BlockSide = chain::cmap::chain::BlockSide::Both;
+    // println!("{:#?}", extracted_by_index.map[&1043255].header());
+    // let blocks: Vec<Box <dyn chain::cmap::chain::ChainBlock>> = extracted_by_index
+    //     .map[&1043255]
+    //     .to_blocks(mode, true);
+    // println!("Blocks: {:#?}", blocks);
 
     println!("Projecting coordinates");
     let mut vec_to_map: Vec<Interval> = vec![
@@ -84,6 +85,36 @@ fn main() {
         .map_through(&mut vec_to_map, 3000, 2.5)
         .expect("Failed mapping coordinates");
     println!("ENST00000693548.1#MYH15_partial_dside_gap: {:#?}", mapped_coords);
+    println!("--------------------------------------------------\n");
+
+    println!("Timing legacy mapper");
+    let mut vec_to_map: Vec<Interval> = vec![
+        Interval::new()
+    ];
+    vec_to_map[0].update_name(String::from("ENST00000358005.7#CCDC32"));
+    vec_to_map[0].update_chrom(String::from("chr15"));
+    vec_to_map[0].update_start(40553970);
+    vec_to_map[0].update_end(40554127);
+    let now = Instant::now();
+    let mapped_coords: FxHashMap<&str, Interval> = extracted_by_index
+        .map[&38]
+        .map_through_(&mut vec_to_map, 3000, 2.5)
+        .expect("Failed mapping coordinates");
+    let elapsed = now.elapsed();
+    println!("Mapped coordinates: {:#?}", mapped_coords);
+    println!("Elapsed time: {:?}", elapsed);
+    println!();
+
+    println!("Timing yield-based mapper");
+    let now = Instant::now();
+    let mapped_coords: FxHashMap<&str, Interval> = extracted_by_index
+        .map[&38]
+        .map_through(&mut vec_to_map, 3000, 2.5)
+        .expect("Failed mapping coordinates");
+    let elapsed = now.elapsed();
+    println!("Mapped coordinates: {:#?}", mapped_coords);
+    println!("Elapsed time: {:?}", elapsed);
+    println!("--------------------------------------------------\n");
 
 
     println!("Checking intersection functionality");
@@ -116,10 +147,25 @@ fn main() {
     vec_for_cov[4].update_name(String::from("ENST00000216338.9#GZMH_5"));
     println!("vec_for_cov={:?}", vec_for_cov);
 
+    println!("Timing legacy intersection");
+    let now = Instant::now();
+    let coverage: FxHashMap<&str, u64> = extracted_by_index
+        .map[&687002]
+        .alignment_cov_(&mut vec_for_cov)
+        .expect("Failed calculating alignment coverage");
+    let elapsed = now.elapsed();
+    println!("Exon coverage for ENST00000216338.9#GZMH_utr2: {:#?}", coverage);
+    println!("Elapsed: {:#?}", elapsed);
+
+    println!("Timing yield-based intersection");
+    let now = Instant::now();
     let coverage: FxHashMap<&str, u64> = extracted_by_index
         .map[&687002]
         .alignment_cov(&mut vec_for_cov)
         .expect("Failed calculating alignment coverage");
+    let elapsed = now.elapsed();
     println!("Exon coverage for ENST00000216338.9#GZMH_utr2: {:#?}", coverage);
+    println!("Elapsed: {:#?}", elapsed);
+
 
 }

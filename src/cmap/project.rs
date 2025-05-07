@@ -5,8 +5,9 @@ use num_traits::CheckedSub;
 use std::cmp::{Ord, PartialOrd, min, max};
 use std::fmt::Debug;
 use std::ops::Sub;
+use yield_return::LocalIter;
 
-use crate::cmap::chain::{Chain, ChainBlock};
+use crate::cmap::chain::{BlockSide, ChainBlock, DoubleSidedBlock, OneSidedBlock};
 
 
 // TODO: Move to `cubiculum`
@@ -22,6 +23,235 @@ where T: Ord + PartialOrd + Sub<Output = T> + CheckedSub<Output = T>//<T: cmp::P
 }
 
 impl crate::cmap::chain::Chain {
+    /// [YM - A first attempt at block yielder]
+    /// A 'yielding' version of to_blocks() from cmap::chain; 
+    /// returns blocks as a generator-like object of Futures;
+    /// not intended to be public, rather aimed at optimizing other functions in the module
+    /// 
+    /// NOTE: Currently solutions based on this method require more time 
+    /// than 'real-time' parsers; this function will be likely modified in future 
+    /// to create a real concurrent data channel
+    /// 
+    /// # Arguments
+    /// 
+    /// * `side`: A BlockSide enum field, specifying coordinates in which genome 
+    /// (reference, query, or both) should be reported
+    /// 
+    /// * `report_gaps`: a boolean value indicating whether alignment chain gaps should be 
+    /// also reported as blocks; by default, only aligned blocks are reported
+    /// 
+    /// #  Returns
+    /// 
+    /// A LocalIter<> object of ChainBlock structs
+    /// 
+    /// ```
+    /// use chaintools as chain;
+    /// use chain::cmap::chain::BlockSide::*;
+    /// 
+    /// let head = b"chain 4900 chrY 58368225 + 25985403 25985638 chr5 151006098 - 43257292 43257528 1\n";
+    /// let block = b"9\t1\t0\n";
+    /// let data = chain::Chain::from(head, block);
+    /// for x in chain.yield_blocks(Ref, false) {
+    ///     println!("Block={:#?}", block);
+    /// }
+    /// ```
+    fn yield_blocks<'a>(
+        &'a self, side: BlockSide, 
+        report_gaps: bool,
+    ) -> yield_return::LocalIter<'a, Box<dyn ChainBlock>>
+    {
+        let generator = LocalIter::new(|mut x| async move {
+            let mut r_start: u64 = self.refs.start;
+            let q_strand: bool = self.query.strand == '+';
+            let mut q_start: u64 = match q_strand {
+                true => self.query.start,
+                false => self.query.size - self.query.start
+            };
+            let mut block_num: u32 = 1;
+            // let mut blocks: Vec<ChainBlock> = Vec::new();
+            let mut q_block_start: u64;
+            let mut q_block_end: u64;
+            for b in &self.alignment {
+                // the reported data structure depends on the 'side' argument value
+                let mut r_block_end: u64 = r_start + (b.size as u64);
+                if q_strand {
+                    q_block_start = q_start;
+                    q_block_end = q_block_start + (b.size as u64);
+                } else {
+                    q_block_start = q_start - (b.size as u64);
+                    q_block_end = q_start;
+                }
+                let block: Box<dyn ChainBlock> = match side {
+                    // report only the reference coordinates
+                    BlockSide::Ref => {
+                        Box::new(
+                            OneSidedBlock::new(block_num.to_string(), true, r_start, r_block_end)
+                        )
+                    },
+                    BlockSide::Query => {
+                        Box::new(
+                            OneSidedBlock::new(block_num.to_string(),false, q_block_start, q_block_end)
+                        )
+                    },
+                    BlockSide::Both => {
+                        Box::new(
+                            DoubleSidedBlock::new(block_num.to_string(), r_start, r_block_end, q_block_start, q_block_end)
+                        )
+                    }
+                };
+                // x.ret(block).await;
+                x.ret(block).await;
+                // blocks.push(block);
+                // r_start += (b.size + b.dt) as u64;
+                // q_start = if q_strand {q_start + b.size as u64} else {q_start - b.size as u64};
+                // r_start += b.dt as u64;
+                // q_start = if q_strand {q_start + (b.dq + b.size) as u64} else {q_start - (b.dq + b.size) as u64};
+                r_start += b.size as u64;
+                q_start = if q_strand {q_start + b.size as u64} else {q_start - b.size as u64};
+                // if chain gap blocks were requested and the first coding block has been passed,
+                // add a gap object
+                if report_gaps && !(b.dq == 0 && b.dq == 0) {
+                    let gap_name: String = format!("{}_{}", block_num, block_num + 1);
+                    r_block_end = r_start + b.dt as u64;
+                    if q_strand {
+                        q_block_start = q_start;
+                        q_block_end = q_block_start + (b.dq as u64);
+                    } else {
+                        q_block_start = q_start - (b.dq as u64);
+                        q_block_end = q_start;
+                    }
+                    let block: Box<dyn ChainBlock> = match side {
+                        BlockSide::Ref => {
+                            Box::new(
+                                OneSidedBlock::new(gap_name, true, r_start, r_block_end)
+                            )
+                        },
+                        BlockSide::Query => {
+                            Box::new(
+                                OneSidedBlock::new(gap_name, false, q_block_start, q_block_end)
+                            )
+                        },
+                        BlockSide::Both => {
+                            Box::new(
+                                DoubleSidedBlock::new( 
+                                    gap_name, r_start, r_block_end, q_block_start, q_block_end 
+                                )
+                            )
+                        }
+                    };
+                    // blocks.push(block);
+                    // x.ret(block).await;
+                    x.ret(block).await;
+                }
+                r_start += b.dt as u64;
+                q_start = if q_strand {q_start + b.dq as u64} else {q_start - b.dq as u64};
+                block_num += 1;
+            }
+
+            });
+            generator
+        }
+
+        pub fn alignment_cov<'a, T>(&self, intervals: &'a mut Vec<T>,) -> Result<FxHashMap<&'a str, u64>> 
+        where 
+            T: Coordinates + Named + Debug
+        {
+            // the same routine as above
+            // first, sort the input vector
+            let mut output: FxHashMap<&str, u64> = FxHashMap::default();
+            intervals.sort_by(
+                |a, b| if a.start().unwrap() == b.start().unwrap() {
+                    a.end().unwrap().cmp(&b.end().unwrap())
+                } else {
+                    a.start().unwrap().cmp(&b.start().unwrap())
+                }
+                );
+            // define the total span for the input intervals
+            let mut min_start: u64 = *intervals[0].start().with_context(||
+                {"Cannot assess coverage for intervals with undefined coordinates"}
+            )?;
+            let max_end: u64 = *intervals[intervals.len() - 1].end().with_context(||
+                {"Cannot assess coverage for intervals with undefined coordinates"}
+            )?; // will this panic??
+            // create a smart iteration index; iteration will always start from this interval
+            let curr: usize = 0;
+            // record the current interval's end coordinate; this will ensure that the iterator will never
+            // skip the nested intervals
+            let curr_end: u64 = *intervals[0].end().with_context(||
+                {"Cannot assess coverage for intervals with undefined coordinates"}
+            )?;
+    
+            // create a smart iteration index; iteration will always start from this interval
+            let mut curr: usize = 0;
+            // record the current interval's end coordinate; this will ensure that the iterator will never
+            // skip the nested intervals
+            let mut curr_end: u64 = *intervals[0].end().with_context(||
+                {"Cannot assess coverage for intervals with undefined coordinates"}
+            )?;
+    
+            // now go
+            for (h, b) in self.yield_blocks(BlockSide::Both, false).enumerate() {
+                let b_r_start = b.r_start().unwrap();
+                let b_r_end = b.r_end().unwrap();
+
+                for (mut i, inter) in intervals.iter().enumerate() {
+                    i += curr;
+                    let inter_start: u64 = *inter.start().with_context(||
+                        {format!("Interval {} has an undefined start coordinate which cannot be mapped", i)}
+                    )?;
+                    let inter_end: u64 = *inter.end().with_context(||
+                        {format!("Interval {} has an undefined end coordinate which cannot be mapped", i)}
+                    )?;
+                    let name: &str = inter.name().with_context(||
+                        {"Interval is not named"}
+                    )?;
+    
+                    if !output.contains_key(&inter.name().unwrap()) {
+                        output.insert(
+                            inter.name().unwrap(),
+                            0
+                        );
+                    }
+    
+                    // chain block is upstream to the current interval;
+                    // since other are guaranteed to start at least in the same position,
+                    // the current loop can be safely exited
+                    if b_r_end < inter_start {
+                        // potentially this is the farthest the intervals have ever reached 
+                        // in terms of the  end coordinate; unless this boundary is exceeded, 
+                        // the iteration start point will not be updated
+                        if inter_end >= curr_end {
+                            // curr = i;
+                            curr_end = inter_end;
+                        }
+                        break
+                    }
+    
+                    // chain block is downstream to the current interval;
+                    // nothing to do here, proceed to the next interval;
+                    if b_r_start > inter_end {
+                        // if this interval is not a boundary of the current overlap group,
+                        // current transcript pointer can be safely updated;
+                        // the next iteration will start downstream to this interval or a nested interval group
+                        if inter_end < curr_end {
+                            curr += 1;
+                        }
+                        continue
+                    };
+    
+                    // println!("Assessing intersection for {}", name);
+    
+                    match intersection(inter_start, inter_end, b_r_start, b_r_end) {
+                        Some(x) => {
+                            *output.get_mut(name).unwrap() += x;
+                        },
+                        None => {}
+                    }
+                }
+            }
+            Ok(output)
+        }
+
     /// [YM] + NOT FINISHED
     /// Maps coordinates from reference to query
     /// 
@@ -38,6 +268,505 @@ impl crate::cmap::chain::Chain {
     /// 
     /// Result<&str, Interval> where each interval contains projected coordinates for each input interval 
     pub fn map_through<'a, T>(
+        &'a self, 
+        // intervals: &mut Vec<(&str, u64, u64, &str)>,
+        intervals: &'a mut Vec<T>,
+        abs_threshold: u64,
+        rel_threshold: f64
+    ) -> Result<FxHashMap<&'a str, Interval>> //Result<FxHashMap<&str, (u64, u64)>> 
+    where 
+        T: Coordinates + Named + Debug
+    {
+        // let output: FxHashMap<&str, (u64, u64)> = FxHashMap::default();
+        let mut output: FxHashMap<&str, Interval> = FxHashMap::default();
+
+        intervals.sort_by(
+        |a, b| if a.start().unwrap() == b.start().unwrap() {
+            a.end().unwrap().cmp(&b.end().unwrap())
+        } else {
+            a.start().unwrap().cmp(&b.start().unwrap())
+        }
+        );
+        // define the total span of input intervals:
+        // blocks before `min_start` will be ignored; 
+        // once `max_end` is passed, iteration over chain stop 
+        let mut min_start: u64 = *intervals[0].start().with_context(||
+            {"Cannot map intervals with undefined coordinates"}
+        )?;
+        let max_end: u64 = *intervals[intervals.len() - 1].end().with_context(||
+            {"Cannot map intervals with undefined coordinates"}
+        )?;
+        // create a smart iteration index; iteration will always start from this interval
+        let mut curr: usize = 0;
+        // record the current interval's end coordinate; this will ensure that the iterator will never
+        // skip the nested intervals
+        let mut curr_end: u64 = *intervals[0].end().with_context(||
+            {"Cannot map intervals with undefined coordinates"}
+        )?;
+
+        // create a hash map of relative length threshold; for long interval lists 
+        // retrieving those from an array might be faster than calculating them every time anew
+        let mut rel_sizes: FxHashMap<&str, u64> = FxHashMap::default();
+
+        // define whether alignment is codirected between reference in query
+        // for now we assume that chains always represent the positive strand in the reference sequence
+        // this means, 'codirectionality' depends on the query strand alone
+        let codirected: bool = &self.query.strand == &'+';
+
+        // initialize the variables standing for block coordinates
+        // (see TODO tho)
+        // 
+        let mut r_start: u64 = self.refs.start;
+        let r_end: u64 = self.refs.end;
+        let q_strand: bool = self.query.strand == '+';
+        let mut q_start: u64 = match q_strand {
+            true => self.query.start,
+            false => self.query.size - self.query.start
+        };
+
+        // finally, initialize the projected coordinate variables
+        let mut start_p: u64;
+        let mut end_p: u64;
+
+        // all set
+        // now, iterate over alignment records
+        for (h, b) in self.yield_blocks(BlockSide::Both, true).enumerate() {
+            let b_r_start = b.r_start().unwrap();
+            let b_r_end = b.r_end().unwrap();
+            let b_q_start = b.q_start().unwrap();
+            let b_q_end = b.q_end().unwrap();
+            let is_gap: bool = b.is_gap();
+            // break if the iterator has passed beyond the last interval
+            if b_r_start > max_end {break};
+            // skip the block preceding the first interval's start in the reference
+            if b_r_end < min_start {
+                
+                continue
+            };
+
+            // check if this is the last block
+            let is_last_block: bool = (b_r_start == b_r_end) && (b_q_start == b_q_end);
+
+            // now, we have a chain block with defined boundaries in both reference and query;
+            // iterate over the intervals, check whether any of their coordinates can be projected 
+            // through this block
+            for (mut i, inter) in intervals[curr..].iter().enumerate() {
+                i += curr;
+                let inter_start: u64 = *inter.start().with_context(||
+                    {format!("Interval {} has an undefined start coordinate which cannot be mapped", i)}
+                )?;
+                let inter_end: u64 = *inter.end().with_context(||
+                    {format!("Interval {} has an undefined end coordinate which cannot be mapped", i)}
+                )?;
+
+                // add a results block to the the output hash map
+                if !output.contains_key(&inter.name().unwrap()) {
+                    output.insert(
+                        inter.name().unwrap(),
+                        Interval::new()
+                    );
+                    output.
+                        entry(&inter.name().unwrap())
+                        .and_modify(
+                            |x| {
+                                x.update_name(inter.name().unwrap().to_string()); // TODO: Will borrow the value!
+                                x.update_chrom(self.query.chr.clone()); // TODO: Bad choice altogether
+                            }
+                        );
+                }
+
+                // chain block is upstream to the current interval;
+                // since other are guaranteed to start at least in the same position,
+                // the current loop can be safely exited
+                if b_r_end < inter_start {
+                    // potentially this is the farthest the intervals have ever reached 
+                    // in terms of the  end coordinate; unless this boundary is exceeded, 
+                    // the iteration start point will not be updated
+                    if inter_end >= curr_end {
+                        // curr = i;
+                        curr_end = inter_end;
+                    }
+                    break
+                }
+
+                // chain block is downstream to the current interval;
+                // nothing to do here, proceed to the next interval;
+                if b_r_start > inter_end {
+                    // if this interval is not a boundary of the current overlap group,
+                    // current transcript pointer can be safely updated;
+                    // the next iteration will start downstream to this interval or a nested interval group
+                    if inter_end < curr_end {
+                        curr += 1;
+                    }
+                    continue
+                };
+
+                // at this point, it is ascertained that at least on coordinate of the block
+                // lies within the the chain block, which makes it potentially mappable;
+                // the exact behavior, however, varies depending on whether mapping is performed 
+                // through an aligned chain block or am unaligned chain gap
+
+                if !is_gap {
+                    for (mut i, inter) in intervals[curr..].iter().enumerate() {
+                        i += curr;
+                        // check whether the start coordinate is within the block
+                        if (b_r_start <= inter_start) && (inter_start <= b_r_end) {
+                            //  start coordinate can be mapped
+                            let offset: u64 = inter_start - b_r_start;
+                            if codirected{
+                                start_p = b_q_start + offset;
+                                // assign to a storage variable
+                                output
+                                    .entry(&inter.name().unwrap())
+                                    .and_modify(
+                                        |x| {
+                                            x.update_start(start_p)
+                                        }
+                                    );
+                            } else {
+                                end_p = b_q_end - offset;
+                                // assign to a storage variable
+                                output
+                                    .entry(&inter.name().unwrap())
+                                    .and_modify(
+                                        |x| {
+                                            x.update_end(end_p)
+                                        }
+                                    );
+                            }
+                            // a special case for the last block; if interval end lies outside of the chain,
+                            // try extrapolating the coordinate unless it is too far from the chain 
+                            if is_last_block && inter_end >  r_end {
+                                // get the alignment offset
+                                let offset: u64 = inter_end - b_r_end;
+                                // get the relative threshold size
+                                let rel_thresh: &u64 = rel_sizes
+                                    .entry(
+                                        inter.name().unwrap_or("a") // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
+                                    )
+                                    .or_insert(inter.length().unwrap() * rel_threshold as u64);
+                                
+                                // check if the offset is within the stated extrapolation limits 
+                                if offset > abs_threshold && offset > *rel_thresh {
+                                    // coordinate is too far to be extrapolated; crop to the chain block's start
+                                    if codirected {
+                                        end_p = b_q_end;
+                                        // assign to a storage variable
+                                        output
+                                            .entry(&inter.name().unwrap())
+                                            .and_modify(
+                                                |x| {
+                                                    x.update_end(end_p)
+                                                }
+                                            );
+                                    } else {
+                                        start_p = b_q_start;
+                                        // assign to a storage variable
+                                        output
+                                            .entry(&inter.name().unwrap())
+                                            .and_modify(
+                                                |x| {
+                                                    x.update_start(start_p)
+                                                }
+                                            );
+                                    }
+                                } else {
+                                    // extrapolated sequence's length does not exceed the stated thresholds
+                                    if codirected {
+                                        end_p = b_q_end + offset;
+                                        // assign to a storage variable
+                                        output
+                                            .entry(&inter.name().unwrap())
+                                            .and_modify(
+                                                |x| {
+                                                    x.update_end(end_p)
+                                                }
+                                            );
+                                    } else {
+                                        start_p = b_q_start - offset;
+                                        // assign to a storage variable
+                                        output
+                                            .entry(&inter.name().unwrap())
+                                            .and_modify(
+                                                |x| {
+                                                    x.update_start(start_p)
+                                                }
+                                            );
+                                    }
+                                }
+                            }
+                        }
+                        // then, check the end coordinate
+                        if (b_r_start <= inter_end) && (inter_end <= b_r_end) {
+                            let offset: u64 = b_r_end - inter_end;
+                            if codirected {
+                                end_p = b_q_end - offset;
+                                // assign to a storage variable
+                                output
+                                    .entry(&inter.name().unwrap())
+                                    .and_modify(
+                                        |x| {
+                                            x.update_end(end_p)
+                                        }
+                                    );
+                            } else {
+                                start_p = b_q_start + offset;
+                                // assign to a storage variable
+                                output
+                                    .entry(&inter.name().unwrap())
+                                    .and_modify(
+                                        |x| {
+                                            x.update_start(start_p)
+                                        }
+                                    );
+                            }
+                        }
+        
+                        // a special case for the first block which extends beyond the chain start
+                        if h == 0 && inter_start < r_start {
+                            let offset: u64 = r_start - inter_start;
+                            // get the relative threshold size
+                            let rel_thresh: &u64 = rel_sizes
+                                .entry(
+                                    inter.name().unwrap_or("a") // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
+                                )
+                                .or_insert((inter.length().unwrap()) * rel_threshold as u64);
+        
+                            // check if the offset is within the stated extrapolation limits 
+                            if offset > abs_threshold && offset > *rel_thresh {
+                                // coordinate is too far to be extrapolated; crop to the chain block's start
+                                if codirected {
+                                    start_p = b_q_start;
+                                    // assign to a storage variable
+                                    output
+                                        .entry(&inter.name().unwrap())
+                                        .and_modify(
+                                            |x| {
+                                                x.update_start(start_p)
+                                            }
+                                        );
+                                } else {
+                                    end_p = b_q_end;
+                                    // assign to a storage variable
+                                    output
+                                        .entry(&inter.name().unwrap())
+                                        .and_modify(
+                                            |x| {
+                                                x.update_end(end_p)
+                                            }
+                                        );
+                                }
+                            } else {
+                                // extrapolated sequence's length does not exceed the stated thresholds
+                                if codirected {
+                                    start_p = b_q_start - offset;
+                                    // assign to a storage variable
+                                    output
+                                        .entry(&inter.name().unwrap())
+                                        .and_modify(
+                                            |x| {
+                                                x.update_start(start_p)
+                                            }
+                                        );
+                                } else {
+                                    end_p = b_q_end + offset;
+                                    // assign to a storage variable
+                                    output
+                                        .entry(&inter.name().unwrap())
+                                        .and_modify(
+                                            |x| {
+                                                x.update_end(end_p)
+                                            }
+                                        );
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    for (mut i, inter) in intervals[curr..].iter().enumerate() {
+                        i += curr;
+                        // let block_id: String = i.to_string();
+                        let inter_start: u64 = *inter.start().with_context(||
+                            {format!("Interval {} has an undefined start coordinate which cannot be mapped", i)}
+                        )?;
+                        let inter_end: u64 = *inter.end().with_context(||
+                            {format!("Interval {} has an undefined end coordinate which cannot be mapped", i)}
+                        )?;
+                        // add a results block to the the output hash map
+                        if !output.contains_key(&inter.name().unwrap()) {
+                            output.insert(
+                                inter.name().unwrap(),
+                                Interval::new()
+                            );
+                            output.
+                                entry(&inter.name().unwrap())
+                                .and_modify(
+                                    |x| {
+                                        x.update_name(inter.name().unwrap().to_string()); // TODO: Will borrow the value!
+                                        x.update_chrom(self.query.chr.clone()); // TODO: Bad choice altogether
+                                    }
+                                );
+                        }
+        
+                        // start coordinate is within the alignment gap
+                        if (r_start <= inter_start) && (inter_start <= b_r_end) {
+                            // get the alignment offset
+                            let offset: u64 = b_r_end - inter_start;//inter_start - r_start;
+                            // get the relative threshold size
+                            let rel_thresh: &u64 = rel_sizes
+                                .entry(
+                                    inter.name().unwrap_or("a") // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
+                                )
+                                .or_insert((inter.length().unwrap()) * rel_threshold as u64);
+        
+                            // check if the offset is within the stated extrapolation limits 
+                            if offset > abs_threshold && offset > *rel_thresh {
+                                // coordinate is too far to be extrapolated; crop to the chain block's start
+                                if codirected {
+                                    start_p = b_q_start;
+                                    // assign to a storage variable
+                                    output
+                                        .entry(&inter.name().unwrap())
+                                        .and_modify(
+                                            |x| {
+                                                x.update_start(start_p)
+                                            }
+                                        );
+                                } else {
+                                    end_p = b_q_end;
+                                    // assign to a storage variable
+                                    output
+                                        .entry(&inter.name().unwrap())
+                                        .and_modify(
+                                            |x| {
+                                                x.update_end(end_p)
+                                            }
+                                        );
+                                }
+                            } else {
+                                // extrapolated sequence's length does not exceed the stated thresholds
+                                if codirected {
+                                    start_p = b_q_start - offset;
+                                    // assign to a storage variable
+                                    output
+                                        .entry(&inter.name().unwrap())
+                                        .and_modify(
+                                            |x| {
+                                                x.update_start(start_p)
+                                            }
+                                        );
+                                } else {
+                                    end_p = b_q_end + offset;
+                                    // assign to a storage variable
+                                    output
+                                        .entry(&inter.name().unwrap())
+                                        .and_modify(
+                                            |x| {
+                                                x.update_end(end_p)
+                                            }
+                                        );
+                                }
+                            }
+                        }
+        
+                        // and the same for end coordinate
+                        if (r_start <= inter_end) && (inter_end <= b_r_end) {
+                            // get the alignment offset
+                            let offset: u64 = inter_end - r_start;//r_block_end - inter_end;
+                            // get the relative threshold size
+                            let rel_thresh: &u64 = rel_sizes
+                                .entry(
+                                    inter.name().unwrap_or("a") // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
+                                )
+                                .or_insert(inter.length().unwrap() * rel_threshold as u64);
+                            
+                            // check if the offset is within the stated extrapolation limits 
+                            if offset > abs_threshold && offset > *rel_thresh {
+                                // coordinate is too far to be extrapolated; crop to the chain block's start
+                                if codirected {
+                                    end_p = b_q_end;
+                                    // assign to a storage variable
+                                    output
+                                        .entry(&inter.name().unwrap())
+                                        .and_modify(
+                                            |x| {
+                                                x.update_end(end_p)
+                                            }
+                                        );
+                                } else {
+                                    start_p = b_q_start;
+                                    // assign to a storage variable
+                                    output
+                                        .entry(&inter.name().unwrap())
+                                        .and_modify(
+                                            |x| {
+                                                x.update_start(start_p)
+                                            }
+                                        );
+                                }
+                            } else {
+                                // extrapolated sequence's length does not exceed the stated thresholds
+                                if codirected {
+                                    end_p = b_q_start + offset;
+                                    // assign to a storage variable
+                                    output
+                                        .entry(&inter.name().unwrap())
+                                        .and_modify(
+                                            |x| {
+                                                x.update_end(end_p)
+                                            }
+                                        );
+                                } else {
+                                    start_p = b_q_end - offset;
+                                    // assign to a storage variable
+                                    output
+                                        .entry(&inter.name().unwrap())
+                                        .and_modify(
+                                            |x| {
+                                                x.update_start(start_p)
+                                            }
+                                        );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // nothing to look past the last chain block; exit the outer for-loop
+            if is_last_block {break};
+
+            // if all the transcripts have been inspected, break the outer loop
+            if curr >= intervals.len() {break};
+            // update the absolute start of all the transcripts intervals
+            min_start = *intervals[curr].start().with_context(||
+                {format!("Interval {} has an undefined start coordinate which cannot be mapped", curr)}
+            )?;
+        }
+        Ok(output)
+    }
+
+    /// NOTE: Functions with a trailing underscore implement 'real-time' chain body parsing;
+    /// they are currently faster than their `yield_blocks()`-based counterparts,
+    /// which we aim to change in futute
+    /// 
+
+    /// [YM]
+    /// Maps coordinates from reference to query
+    /// 
+    /// # Arguments
+    /// 
+    /// `intervals` - A collection of objects having "start" and "end" coordinates; using tuples for now
+    /// TODO: Define valid types 
+    /// 
+    /// `abs_threshold` - An absolute value by which an unaligned coordinated can be extrapolated
+    /// 
+    /// `rel_threshold` - A multiplier of an interval's length specifying the relative threshold of extrapolation
+    /// 
+    /// # Returns
+    /// 
+    /// Result<&str, Interval> where each interval contains projected coordinates for each input interval 
+    pub fn map_through_<'a, T>(
         &'a self, 
         // intervals: &mut Vec<(&str, u64, u64, &str)>,
         intervals: &'a mut Vec<T>,
@@ -554,7 +1283,7 @@ impl crate::cmap::chain::Chain {
     /// 
     /// 
     /// 
-    pub fn alignment_cov<'a, T>(&self, intervals: &'a mut Vec<T>,) -> Result<FxHashMap<&'a str, u64>> 
+    pub fn alignment_cov_<'a, T>(&self, intervals: &'a mut Vec<T>,) -> Result<FxHashMap<&'a str, u64>> 
     where 
         T: Coordinates + Named + Debug
     {
@@ -645,7 +1374,7 @@ impl crate::cmap::chain::Chain {
                     continue
                 };
 
-                println!("Assessing intersection for {}", name);
+                // println!("Assessing intersection for {}", name);
 
                 match intersection(inter_start, inter_end, r_start, r_block_end) {
                     Some(x) => {

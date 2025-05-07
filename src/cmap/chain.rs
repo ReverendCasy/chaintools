@@ -18,20 +18,131 @@ pub struct Chain {
     pub id: u32,
 }
 
-/// [YM] A structure to represent alignment records as tuples of genomic coordinates
-#[derive(Clone, Debug)]
-pub enum ChainBlock {
-    OneSided { id: String, start: u64, end: u64 },
-    DoubleSided { id: String, r_start: u64, r_end: u64, q_start: u64, q_end: u64 }
-}
- 
-
 /// [YM] An enum specifying for which assemblies block coordinates should be extracted
 pub enum BlockSide {
     Ref,
     Query,
     Both
 }
+
+/// [YM] A structure to represent alignment records as tuples of genomic coordinates
+#[derive(Clone, Debug)]
+pub struct OneSidedBlock {
+    id: String,
+    is_ref: bool,
+    start: u64,
+    end: u64
+}
+
+impl OneSidedBlock{
+    pub fn new(id: String, is_ref: bool, start: u64, end: u64) -> OneSidedBlock {
+        OneSidedBlock{id: id, is_ref: is_ref, start: start, end: end}
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct DoubleSidedBlock {
+    id: String,
+    r_start: u64,
+    r_end: u64,
+    q_start: u64,
+    q_end: u64,
+}
+
+impl DoubleSidedBlock{
+    pub fn new(id: String, r_start: u64, r_end: u64, q_start: u64, q_end: u64) -> DoubleSidedBlock {
+        DoubleSidedBlock{id: id, r_start: r_start, r_end: r_end, q_start: q_start, q_end: q_end}
+    }
+}
+
+pub trait ChainBlock {
+    fn side(&self) -> BlockSide;
+
+    fn is_gap(&self) -> bool;
+
+    fn r_start(&self) -> Option<u64>;
+
+    fn r_end(&self) -> Option<u64>;
+
+    fn q_start(&self) -> Option<u64>;
+
+    fn q_end(&self) -> Option<u64>;
+
+}
+
+impl ChainBlock for OneSidedBlock{
+    fn side(&self) -> BlockSide {
+        match &self.is_ref {
+            true => BlockSide::Ref,
+            false => BlockSide::Query
+        }
+    }
+
+    fn is_gap(&self) -> bool{
+        self.id.contains('_')
+    }
+
+    fn r_start(&self) -> Option<u64>{
+        match &self.is_ref {
+            true => {Some(self.start)},
+            false => {None}
+        }
+    }
+
+    fn r_end(&self) -> Option<u64>{
+        match &self.is_ref {
+            true => {Some(self.end)},
+            false => {None}
+        }
+    }
+
+    fn q_start(&self) -> Option<u64>{
+        match &self.is_ref {
+            false => {Some(self.start)},
+            true => {None}
+        }
+    }
+
+    fn q_end(&self) -> Option<u64>{
+        match &self.is_ref {
+            false => {Some(self.end)},
+            true => {None}
+        }
+    }
+} 
+
+impl ChainBlock for DoubleSidedBlock{
+    fn side(&self) -> BlockSide {
+        BlockSide::Both
+    }
+
+    fn is_gap(&self) -> bool{
+        self.id.contains('_')
+    }
+
+    fn r_start(&self) -> Option<u64>{
+        Some(self.r_start)
+    }
+
+    fn r_end(&self) -> Option<u64>{
+        Some(self.r_end)
+    }
+
+    fn q_start(&self) -> Option<u64>{
+        Some(self.q_start)
+    }
+
+    fn q_end(&self) -> Option<u64>{
+        Some(self.q_end)
+    }
+
+} 
+
+// pub enum ChainBlock {
+//     OneSided { id: String, start: u64, end: u64 },
+//     DoubleSided { id: String, r_start: u64, r_end: u64, q_start: u64, q_end: u64 }
+// }
+
 
 impl Chain {
     /// Create a new chain object from a chain block (header, alignment).
@@ -374,7 +485,7 @@ impl Chain {
     /// 
     /// TODO: 
     /// Implement as a mpsc channel that yields the blocks instead of returning the whole vector
-    pub fn to_blocks(&self, side: BlockSide, report_gaps: bool) -> Vec<ChainBlock> {
+    pub fn to_blocks(&self, side: BlockSide, report_gaps: bool) -> Vec<Box<dyn ChainBlock>> {
         let mut r_start: u64 = self.refs.start;
         let q_strand: bool = self.query.strand == '+';
         let mut q_start: u64 = match q_strand {
@@ -382,7 +493,7 @@ impl Chain {
             false => self.query.size - self.query.start
         };
         let mut block_num: u32 = 1;
-        let mut blocks: Vec<ChainBlock> = Vec::new();
+        let mut blocks: Vec<Box<dyn ChainBlock>> = Vec::new();
         let mut q_block_start: u64;
         let mut q_block_end: u64;
         // iterate over alignment records
@@ -396,16 +507,22 @@ impl Chain {
                 q_block_start = q_start - (b.size as u64);
                 q_block_end = q_start;
             }
-            let block: ChainBlock = match side {
+            let block: Box<dyn ChainBlock> = match side {
                 // report only the reference coordinates
                 BlockSide::Ref => {
-                    ChainBlock::OneSided{id: block_num.to_string(), start: r_start, end: r_block_end}
+                    Box::new(
+                        OneSidedBlock{id: block_num.to_string(), is_ref: true, start: r_start, end: r_block_end}
+                    )
                 },
                 BlockSide::Query => {
-                    ChainBlock::OneSided{id: block_num.to_string(), start: q_block_start, end: q_block_end}
+                    Box::new(
+                        OneSidedBlock{id: block_num.to_string(), is_ref: false, start: q_block_start, end: q_block_end}
+                    )
                 },
                 BlockSide::Both => {
-                    ChainBlock::DoubleSided { id: block_num.to_string(), r_start: r_start, r_end: r_block_end, q_start: q_block_start, q_end: q_block_end }
+                    Box::new(
+                        DoubleSidedBlock { id: block_num.to_string(), r_start: r_start, r_end: r_block_end, q_start: q_block_start, q_end: q_block_end }
+                    )
                 }
             };
             blocks.push(block);
@@ -427,17 +544,23 @@ impl Chain {
                     q_block_start = q_start - (b.dq as u64);
                     q_block_end = q_start;
                 }
-                let block: ChainBlock = match side {
+                let block: Box<dyn ChainBlock> = match side {
                     BlockSide::Ref => {
-                        ChainBlock::OneSided { id: gap_name, start: r_start, end: r_block_end }
+                        Box::new(
+                            OneSidedBlock { id: gap_name, is_ref: true, start: r_start, end: r_block_end }
+                        )
                     },
                     BlockSide::Query => {
-                        ChainBlock::OneSided { id: gap_name, start: q_block_start, end: q_block_end }
+                        Box::new(
+                            OneSidedBlock { id: gap_name, is_ref: false, start: q_block_start, end: q_block_end }
+                        )
                     },
                     BlockSide::Both => {
-                        ChainBlock::DoubleSided { 
-                            id: gap_name, r_start: r_start, r_end: r_block_end, q_start: q_block_start, q_end: q_block_end 
-                        }
+                        Box::new(
+                            DoubleSidedBlock { 
+                                id: gap_name, r_start: r_start, r_end: r_block_end, q_start: q_block_start, q_end: q_block_end 
+                            }
+                        )
                     }
                 };
                 blocks.push(block);
