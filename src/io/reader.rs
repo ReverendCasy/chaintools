@@ -338,7 +338,7 @@ impl Reader {
             let (start, end) = match index.get(&chain_id) {
                 Some(x) => {(x.0 as u64, x.1 as u64)},
                 None => {
-                    panic!("Chain {} was not found in the index file", chain_id)
+                    panic!("Chain ID {} was not found in the index file", chain_id)
                 }
             };
             // extract the chain bytes
