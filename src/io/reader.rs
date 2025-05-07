@@ -305,6 +305,14 @@ impl Reader {
             }
             if index.len() == chains.len() && !all {break}
         }
+        if index.len() != chains.len() && !all {
+            for c in chains {
+                if !chains.contains(c) {
+                    eprintln!("Chain {} is missing from the chain file", c)
+                }
+            }
+            panic!("Certain chains are missing from the chain file");
+        }
         Ok(index)
     }
 
@@ -329,7 +337,7 @@ impl Reader {
         let index: FxHashMap<u64, (u64, u64)> = Self::read_index(index_file, &chains, all)?;
 
         let mut f = File::open(file)?;
-        for chain_id in chains {
+        for chain_id in index.keys() {
             // get chain coordinates, panic if the chain Id is missing from the index file
             let (start, end) = match index.get(&chain_id) {
                 Some(x) => {(x.0 as u64, x.1 as u64)},
