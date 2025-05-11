@@ -1413,11 +1413,11 @@ impl crate::cmap::chain::Chain {
                 }
             }
             println!("curr={}, intervals.len()={}", curr, intervals.len());
-            if curr >= intervals.len() {break}
+            if curr >= intervals.len() {println!("Last interval reached; r_start={}, r_block_end={}", r_start, r_block_end); break}
             r_start += (b.size + b.dt) as u64;
             min_start  = *intervals[curr].start().unwrap();
         }
-
+        println!("END: curr={}", curr);
         Ok(output)
     }
 }
