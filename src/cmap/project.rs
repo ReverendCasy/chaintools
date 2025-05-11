@@ -220,7 +220,7 @@ impl crate::cmap::chain::Chain {
                 if b_r_end < min_start {continue};
                 if b_r_start > max_end {break};
 
-                for (mut i, inter) in intervals.iter().enumerate() {
+                for (mut i, inter) in intervals[curr..].iter().enumerate() {
                     i += curr;
                     let inter_start: u64 = *inter.start().with_context(||
                         {format!("Interval {} has an undefined start coordinate which cannot be mapped", i)}
@@ -1360,7 +1360,7 @@ impl crate::cmap::chain::Chain {
             if r_block_end < min_start {continue};
             println!("r_start={}, r_block_end={}, min_start={}, max_end={}", r_start, r_block_end, min_start, max_end);
             if r_start > max_end {println!("Last end exceeded: r_start={}, max_end={}", r_start, max_end); break};
-            for (mut i, inter) in intervals.iter().enumerate() {
+            for (mut i, inter) in intervals[curr..].iter().enumerate() {
                 i += curr;
                 let inter_start: u64 = *inter.start().with_context(||
                     {format!("Interval {} has an undefined start coordinate which cannot be mapped", i)}
