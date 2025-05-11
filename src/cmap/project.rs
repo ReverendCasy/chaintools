@@ -788,15 +788,17 @@ impl crate::cmap::chain::Chain {
     /// 
     /// `rel_threshold` - A multiplier of an interval's length specifying the relative threshold of extrapolation
     /// 
-    /// # Returns
+    /// `ignore_undefined` - Boolean flag indicating whether projections for intervals fully enclosed in aligned chain gaps should be left undefined
     /// 
+    /// # Returns
     /// Result<&str, Interval> where each interval contains projected coordinates for each input interval 
     pub fn map_through_<'a, T>(
         &'a self, 
         // intervals: &mut Vec<(&str, u64, u64, &str)>,
         intervals: &'a mut Vec<T>,
         abs_threshold: u64,
-        rel_threshold: f64
+        rel_threshold: f64,
+        ignore_undefined: bool
     ) -> Result<FxHashMap<&'a str, Interval>> //Result<FxHashMap<&str, (u64, u64)>> 
     where 
         T: Coordinates + Named + Debug
@@ -1132,6 +1134,8 @@ impl crate::cmap::chain::Chain {
             // this time for the chain gap
             for (mut i, inter) in intervals[curr..].iter().enumerate() {
                 i += curr;
+                // keep track on coordinates enclosed in this gap for this interval
+                let mut coords_in_gap: u8 = 0;
                 let block_id: String = i.to_string();
                 let inter_start: u64 = *inter.start().with_context(||
                     {format!("Interval {} has an undefined start coordinate which cannot be mapped", i)}
@@ -1157,6 +1161,7 @@ impl crate::cmap::chain::Chain {
 
                 // start coordinate is within the alignment gap
                 if (r_start <= inter_start) && (inter_start <= r_block_end) {
+                    coords_in_gap += 1;
                     // get the alignment offset
                     let offset: u64 = r_block_end - inter_start;//inter_start - r_start;
                     // get the relative threshold size
@@ -1218,6 +1223,17 @@ impl crate::cmap::chain::Chain {
 
                 // and the same for end coordinate
                 if (r_start <= inter_end) && (inter_end <= r_block_end) {
+                    coords_in_gap += 1;
+                    if coords_in_gap == 2 && !ignore_undefined {
+                        output
+                            .entry(&inter.name().unwrap())
+                            .and_modify(
+                                |x| {
+                                    x.reset_end();
+                                    x.reset_end()
+                                }
+                            );
+                    }
                     // get the alignment offset
                     let offset: u64 = inter_end - r_start;//r_block_end - inter_end;
                     // get the relative threshold size

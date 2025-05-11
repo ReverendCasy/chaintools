@@ -98,7 +98,7 @@ fn main() {
     let now = Instant::now();
     let mapped_coords: FxHashMap<&str, Interval> = extracted_by_index
         .map[&38]
-        .map_through_(&mut vec_to_map, 3000, 2.5)
+        .map_through_(&mut vec_to_map, 3000, 2.5, true)
         .expect("Failed mapping coordinates");
     let elapsed = now.elapsed();
     println!("Mapped coordinates: {:#?}", mapped_coords);
