@@ -1357,8 +1357,14 @@ impl crate::cmap::chain::Chain {
         for (h, b) in self.alignment.iter().enumerate() {
             r_block_end = r_start + b.size as u64;
             println!("r_start={}, r_block_end={}, min_start={}, max_end={}", r_start, r_block_end, min_start, max_end);
-            // continue if the first interval has not yet been reached, break if the last one has been passed
-            if r_block_end < min_start {println!("r_block_end < min_start; continue"); continue};
+            // continue if the first interval has not yet been reached
+            if r_block_end < min_start {
+                // don't forget to update the next block's start point
+                r_start += (b.size + b.dt) as u64;
+                println!("r_block_end < min_start; continue"); 
+                continue
+            };
+            // break the block loop if the last interval has been passed
             if r_start > max_end {
                 println!("Last end exceeded: r_start={}, max_end={}", r_start, max_end); break
             };
@@ -1401,7 +1407,7 @@ impl crate::cmap::chain::Chain {
                         curr_end = inter_end;
                     }
                     println!("Bbbbbreaking the inner loop; r_start={}, r_block_end={}, inter_start={}, inter_end={}, i={}, curr={}", r_start, r_block_end, inter_start, inter_end, i, curr);
-                    r_start += (b.size + b.dt) as u64;
+                    // r_start += (b.size + b.dt) as u64;
                     break
                 }
 
@@ -1426,8 +1432,11 @@ impl crate::cmap::chain::Chain {
                 curr_end = max(curr_end, inter_end);
             }
             println!("curr={}, intervals.len()={}, curr_end={}, min_start={}, max_end={}", curr, intervals.len(), curr_end, min_start, max_end);
+            // if the last interval has been passed after the inner for-loop, break the outer one
             if curr >= intervals.len() {println!("Last interval reached; r_start={}, r_block_end={}", r_start, r_block_end); break}
+            // otherwise, update the next block's start point
             r_start += (b.size + b.dt) as u64;
+            // and the first interval's start point
             min_start  = *intervals[curr].start().unwrap();
         }
         println!("END: curr={},  r_start={}, r_block_end={}, min_start={}, max_end={}", curr, r_start, r_block_end, min_start, max_end);
