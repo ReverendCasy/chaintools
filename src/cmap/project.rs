@@ -1350,16 +1350,18 @@ impl crate::cmap::chain::Chain {
         // initialize the variables standing for block coordinates
         // in this case, only the ref coordinates matter
         let mut r_start: u64 = self.refs.start;
-        let mut r_block_end: u64;
+        let mut r_block_end: u64 = 0;
         let r_end: u64 = self.refs.end;
 
         // now go
         for (h, b) in self.alignment.iter().enumerate() {
             r_block_end = r_start + b.size as u64;
             // continue if the first interval has not yet been reached, break if the last one has been passed
-            if r_block_end < min_start {continue};
+            if r_block_end < min_start {println!("r_block_end < min_start; continue"); continue};
             println!("r_start={}, r_block_end={}, min_start={}, max_end={}", r_start, r_block_end, min_start, max_end);
-            if r_start > max_end {println!("Last end exceeded: r_start={}, max_end={}", r_start, max_end); break};
+            if r_start > max_end {
+                println!("Last end exceeded: r_start={}, max_end={}", r_start, max_end); break
+            };
             for (mut i, inter) in intervals[curr..].iter().enumerate() {
                 i += curr;
                 let inter_start: u64 = *inter.start().with_context(||
@@ -1398,6 +1400,7 @@ impl crate::cmap::chain::Chain {
                         // curr = i;
                         curr_end = inter_end;
                     }
+                    println!("Bbbbbreaking the inner loop; r_start={}, r_block_end={}, inter_start={}, inter_end={}, i={}, curr={}", r_start, r_block_end, inter_start, inter_end, i, curr);
                     break
                 }
 
@@ -1426,7 +1429,7 @@ impl crate::cmap::chain::Chain {
             r_start += (b.size + b.dt) as u64;
             min_start  = *intervals[curr].start().unwrap();
         }
-        println!("END: curr={}", curr);
+        println!("END: curr={},  r_start={}, r_block_end={}", curr, r_start, r_block_end);
         Ok(output)
     }
 }
