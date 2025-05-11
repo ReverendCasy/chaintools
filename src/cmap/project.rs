@@ -1321,7 +1321,7 @@ impl crate::cmap::chain::Chain {
             } else {
                 a.start().unwrap().cmp(&b.start().unwrap())
             }
-            );
+        );
         // define the total span for the input intervals
         let mut min_start: u64 = *intervals[0].start().with_context(||
             {"Cannot assess coverage for intervals with undefined coordinates"}
@@ -1371,6 +1371,7 @@ impl crate::cmap::chain::Chain {
                 let name: &str = inter.name().with_context(||
                     {"Interval is not named"}
                 )?;
+                println!("inter_start={}, inter_end={}, name={}", inter_start, inter_end, name);
 
                 if !output.contains_key(&inter.name().unwrap()) {
                     output.insert(
@@ -1420,7 +1421,7 @@ impl crate::cmap::chain::Chain {
                 }
                 curr_end = max(curr_end, inter_end);
             }
-            println!("curr={}, intervals.len()={}", curr, intervals.len());
+            println!("curr={}, intervals.len()={}, curr_end={}", curr, intervals.len(), curr_end);
             if curr >= intervals.len() {println!("Last interval reached; r_start={}, r_block_end={}", r_start, r_block_end); break}
             r_start += (b.size + b.dt) as u64;
             min_start  = *intervals[curr].start().unwrap();
