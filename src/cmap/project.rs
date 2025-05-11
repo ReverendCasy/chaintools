@@ -1356,9 +1356,9 @@ impl crate::cmap::chain::Chain {
         // now go
         for (h, b) in self.alignment.iter().enumerate() {
             r_block_end = r_start + b.size as u64;
+            println!("r_start={}, r_block_end={}, min_start={}, max_end={}", r_start, r_block_end, min_start, max_end);
             // continue if the first interval has not yet been reached, break if the last one has been passed
             if r_block_end < min_start {println!("r_block_end < min_start; continue"); continue};
-            println!("r_start={}, r_block_end={}, min_start={}, max_end={}", r_start, r_block_end, min_start, max_end);
             if r_start > max_end {
                 println!("Last end exceeded: r_start={}, max_end={}", r_start, max_end); break
             };
