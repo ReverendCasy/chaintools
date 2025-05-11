@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use cubiculum::merge::merge::intersection;
 use cubiculum::structs::structs::{Coordinates, Interval, Named};
 use fxhash::FxHashMap;
-use std::cmp::{Ord};
+use std::cmp::{max, Ord};
 use std::fmt::Debug;
 use yield_return::LocalIter;
 
@@ -1336,6 +1336,8 @@ impl crate::cmap::chain::Chain {
         let mut curr_end: u64 = *intervals[0].end().with_context(||
             {"Cannot assess coverage for intervals with undefined coordinates"}
         )?;
+        // also, keep track of the previous block's end
+        let mut prev_end = *intervals[0].end().unwrap();
 
         // create a smart iteration index; iteration will always start from this interval
         let mut curr: usize = 0;
@@ -1381,6 +1383,13 @@ impl crate::cmap::chain::Chain {
                 // since other are guaranteed to start at least in the same position,
                 // the current loop can be safely exited
                 if r_block_end < inter_start {
+                    // the pointer can be updated here, but only if the next block is guaranteed to lie further 
+                    // downstream to the previous interval;
+                    // since the chain block are sorted and do not overlap, the easiest way to prove it
+                    // is to check whether the current block's end does not end within the current interval group 
+                    if r_block_end >= curr_end {
+                        curr = i
+                    }
                     // potentially this is the farthest the intervals have ever reached 
                     // in terms of the  end coordinate; unless this boundary is exceeded, 
                     // the iteration start point will not be updated
@@ -1394,16 +1403,14 @@ impl crate::cmap::chain::Chain {
                 // chain block is downstream to the current interval;
                 // nothing to do here, proceed to the next interval;
                 if r_start > inter_end {
-                    // if this interval is not a boundary of the current overlap group,
-                    // current transcript pointer can be safely updated;
-                    // the next iteration will start downstream to this interval or a nested interval group
-                    if inter_end < curr_end {
-                        curr += 1;
-                    }
+                    // if inter_end == curr_end {
+                    //     curr += 1;
+                    // }
                     continue
                 };
 
-                // println!("Assessing intersection for {}", name);
+                // current interval and current block intersect by at least 1 bp;
+                // record their intersection
 
                 match intersection(inter_start, inter_end, r_start, r_block_end) {
                     Some(x) => {
@@ -1411,6 +1418,7 @@ impl crate::cmap::chain::Chain {
                     },
                     None => {}
                 }
+                curr_end = max(curr_end, inter_end);
             }
             println!("curr={}, intervals.len()={}", curr, intervals.len());
             if curr >= intervals.len() {println!("Last interval reached; r_start={}, r_block_end={}", r_start, r_block_end); break}
