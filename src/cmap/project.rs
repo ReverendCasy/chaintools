@@ -1401,6 +1401,7 @@ impl crate::cmap::chain::Chain {
                         curr_end = inter_end;
                     }
                     println!("Bbbbbreaking the inner loop; r_start={}, r_block_end={}, inter_start={}, inter_end={}, i={}, curr={}", r_start, r_block_end, inter_start, inter_end, i, curr);
+                    r_start += (b.size + b.dt) as u64;
                     break
                 }
 
