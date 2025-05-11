@@ -894,18 +894,21 @@ impl crate::cmap::chain::Chain {
                 let inter_end: u64 = *inter.end().with_context(||
                     {format!("Interval {} has an undefined end coordinate which cannot be mapped", i)}
                 )?;
+                let inter_name = inter.name().with_context(||
+                    {format!("Interval {} has an undefined name value; cannot assign projected coordinates", i)}
+                )?;
 
                 // add a results block to the the output hash map
-                if !output.contains_key(&inter.name().unwrap()) {
+                if !output.contains_key(&inter_name) {
                     output.insert(
                         inter.name().unwrap(),
                         Interval::new()
                     );
                     output.
-                        entry(&inter.name().unwrap())
+                        entry(&inter_name)
                         .and_modify(
                             |x| {
-                                x.update_name(inter.name().unwrap().to_string()); // TODO: Will borrow the value!
+                                x.update_name(inter_name.to_string()); // TODO: Will borrow the value!
                                 x.update_chrom(self.query.chr.clone()); // TODO: Bad choice altogether
                             }
                         );
@@ -945,7 +948,7 @@ impl crate::cmap::chain::Chain {
                         start_p = q_block_start + offset;
                         // assign to a storage variable
                         output
-                            .entry(&inter.name().unwrap())
+                            .entry(&inter_name)
                             .and_modify(
                                 |x| {
                                     x.update_start(start_p)
@@ -955,7 +958,7 @@ impl crate::cmap::chain::Chain {
                         end_p = q_block_end - offset;
                         // assign to a storage variable
                         output
-                            .entry(&inter.name().unwrap())
+                            .entry(&inter_name)
                             .and_modify(
                                 |x| {
                                     x.update_end(end_p)
@@ -970,7 +973,7 @@ impl crate::cmap::chain::Chain {
                         // get the relative threshold size
                         let rel_thresh: &u64 = rel_sizes
                             .entry(
-                                inter.name().unwrap_or("a") // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
+                                inter_name // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
                             )
                             .or_insert(inter.length().unwrap() * rel_threshold as u64);
                         
@@ -981,7 +984,7 @@ impl crate::cmap::chain::Chain {
                                 end_p = q_block_end;
                                 // assign to a storage variable
                                 output
-                                    .entry(&inter.name().unwrap())
+                                    .entry(&inter_name)
                                     .and_modify(
                                         |x| {
                                             x.update_end(end_p)
@@ -991,7 +994,7 @@ impl crate::cmap::chain::Chain {
                                 start_p = q_block_start;
                                 // assign to a storage variable
                                 output
-                                    .entry(&inter.name().unwrap())
+                                    .entry(&inter_name)
                                     .and_modify(
                                         |x| {
                                             x.update_start(start_p)
@@ -1004,7 +1007,7 @@ impl crate::cmap::chain::Chain {
                                 end_p = q_block_end + offset;
                                 // assign to a storage variable
                                 output
-                                    .entry(&inter.name().unwrap())
+                                    .entry(&inter_name)
                                     .and_modify(
                                         |x| {
                                             x.update_end(end_p)
@@ -1014,7 +1017,7 @@ impl crate::cmap::chain::Chain {
                                 start_p = q_block_start - offset;
                                 // assign to a storage variable
                                 output
-                                    .entry(&inter.name().unwrap())
+                                    .entry(&inter_name)
                                     .and_modify(
                                         |x| {
                                             x.update_start(start_p)
@@ -1031,7 +1034,7 @@ impl crate::cmap::chain::Chain {
                         end_p = q_block_end - offset;
                         // assign to a storage variable
                         output
-                            .entry(&inter.name().unwrap())
+                            .entry(&inter_name)
                             .and_modify(
                                 |x| {
                                     x.update_end(end_p)
@@ -1041,7 +1044,7 @@ impl crate::cmap::chain::Chain {
                         start_p = q_block_start + offset;
                         // assign to a storage variable
                         output
-                            .entry(&inter.name().unwrap())
+                            .entry(&inter_name)
                             .and_modify(
                                 |x| {
                                     x.update_start(start_p)
@@ -1056,7 +1059,7 @@ impl crate::cmap::chain::Chain {
                     // get the relative threshold size
                     let rel_thresh: &u64 = rel_sizes
                         .entry(
-                            inter.name().unwrap_or("a") // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
+                            inter_name // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
                         )
                         .or_insert((inter.length().unwrap()) * rel_threshold as u64);
 
@@ -1067,7 +1070,7 @@ impl crate::cmap::chain::Chain {
                             start_p = q_block_start;
                             // assign to a storage variable
                             output
-                                .entry(&inter.name().unwrap())
+                                .entry(&inter_name)
                                 .and_modify(
                                     |x| {
                                         x.update_start(start_p)
@@ -1077,7 +1080,7 @@ impl crate::cmap::chain::Chain {
                             end_p = q_block_end;
                             // assign to a storage variable
                             output
-                                .entry(&inter.name().unwrap())
+                                .entry(&inter_name)
                                 .and_modify(
                                     |x| {
                                         x.update_end(end_p)
@@ -1090,7 +1093,7 @@ impl crate::cmap::chain::Chain {
                             start_p = q_block_start - offset;
                             // assign to a storage variable
                             output
-                                .entry(&inter.name().unwrap())
+                                .entry(&inter_name)
                                 .and_modify(
                                     |x| {
                                         x.update_start(start_p)
@@ -1100,7 +1103,7 @@ impl crate::cmap::chain::Chain {
                             end_p = q_block_end + offset;
                             // assign to a storage variable
                             output
-                                .entry(&inter.name().unwrap())
+                                .entry(&inter_name)
                                 .and_modify(
                                     |x| {
                                         x.update_end(end_p)
@@ -1136,7 +1139,6 @@ impl crate::cmap::chain::Chain {
                 i += curr;
                 // keep track on coordinates enclosed in this gap for this interval
                 let mut coords_in_gap: u8 = 0;
-                let block_id: String = i.to_string();
                 let inter_start: u64 = *inter.start().with_context(||
                     {format!("Interval {} has an undefined start coordinate which cannot be mapped", i)}
                 )?;
@@ -1161,6 +1163,7 @@ impl crate::cmap::chain::Chain {
 
                 // start coordinate is within the alignment gap
                 if (r_start <= inter_start) && (inter_start <= r_block_end) {
+                    println!("inter_start={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", inter_start, r_start, r_block_end, q_block_start, q_block_end);
                     coords_in_gap += 1;
                     // get the alignment offset
                     let offset: u64 = r_block_end - inter_start;//inter_start - r_start;
@@ -1223,6 +1226,7 @@ impl crate::cmap::chain::Chain {
 
                 // and the same for end coordinate
                 if (r_start <= inter_end) && (inter_end <= r_block_end) {
+                    println!("inter_end={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", inter_start, r_start, r_block_end, q_block_start, q_block_end);
                     coords_in_gap += 1;
                     if coords_in_gap == 2 && !ignore_undefined {
                         output
@@ -1233,6 +1237,7 @@ impl crate::cmap::chain::Chain {
                                     x.reset_end()
                                 }
                             );
+                        continue
                     }
                     // get the alignment offset
                     let offset: u64 = inter_end - r_start;//r_block_end - inter_end;
