@@ -1412,6 +1412,7 @@ impl crate::cmap::chain::Chain {
                 }
             }
             r_start += (b.size + b.dt) as u64;
+            min_start  = *intervals[curr].start().unwrap();
         }
 
         Ok(output)
