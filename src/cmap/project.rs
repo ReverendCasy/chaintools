@@ -1424,12 +1424,12 @@ impl crate::cmap::chain::Chain {
                 }
                 curr_end = max(curr_end, inter_end);
             }
-            println!("curr={}, intervals.len()={}, curr_end={}", curr, intervals.len(), curr_end);
+            println!("curr={}, intervals.len()={}, curr_end={}, min_start={}, max_end={}", curr, intervals.len(), curr_end, min_start, max_end);
             if curr >= intervals.len() {println!("Last interval reached; r_start={}, r_block_end={}", r_start, r_block_end); break}
             r_start += (b.size + b.dt) as u64;
             min_start  = *intervals[curr].start().unwrap();
         }
-        println!("END: curr={},  r_start={}, r_block_end={}", curr, r_start, r_block_end);
+        println!("END: curr={},  r_start={}, r_block_end={}, min_start={}, max_end={}", curr, r_start, r_block_end, min_start, max_end);
         Ok(output)
     }
 }
