@@ -1328,7 +1328,7 @@ impl crate::cmap::chain::Chain {
         )?;
         let max_end: u64 = *intervals[intervals.len() - 1].end().with_context(||
             {"Cannot assess coverage for intervals with undefined coordinates"}
-        )?; // will this panic??
+        )?;
         // create a smart iteration index; iteration will always start from this interval
         let mut curr: usize = 0;
         // record the current interval's end coordinate; this will ensure that the iterator will never
@@ -1336,8 +1336,6 @@ impl crate::cmap::chain::Chain {
         let mut curr_end: u64 = *intervals[0].end().with_context(||
             {"Cannot assess coverage for intervals with undefined coordinates"}
         )?;
-        // also, keep track of the previous block's end
-        let mut prev_end = *intervals[0].end().unwrap();
 
         // create a smart iteration index; iteration will always start from this interval
         let mut curr: usize = 0;
@@ -1356,17 +1354,15 @@ impl crate::cmap::chain::Chain {
         // now go
         for (h, b) in self.alignment.iter().enumerate() {
             r_block_end = r_start + b.size as u64;
-            println!("r_start={}, r_block_end={}, min_start={}, max_end={}", r_start, r_block_end, min_start, max_end);
             // continue if the first interval has not yet been reached
             if r_block_end < min_start {
                 // don't forget to update the next block's start point
                 r_start += (b.size + b.dt) as u64;
-                println!("r_block_end < min_start; continue"); 
                 continue
             };
             // break the block loop if the last interval has been passed
             if r_start > max_end {
-                println!("Last end exceeded: r_start={}, max_end={}", r_start, max_end); break
+                break
             };
             for (mut i, inter) in intervals[curr..].iter().enumerate() {
                 i += curr;
@@ -1379,7 +1375,6 @@ impl crate::cmap::chain::Chain {
                 let name: &str = inter.name().with_context(||
                     {"Interval is not named"}
                 )?;
-                println!("inter_start={}, inter_end={}, name={}", inter_start, inter_end, name);
 
                 if !output.contains_key(&inter.name().unwrap()) {
                     output.insert(
@@ -1406,8 +1401,6 @@ impl crate::cmap::chain::Chain {
                         // curr = i;
                         curr_end = inter_end;
                     }
-                    println!("Bbbbbreaking the inner loop; r_start={}, r_block_end={}, inter_start={}, inter_end={}, i={}, curr={}", r_start, r_block_end, inter_start, inter_end, i, curr);
-                    // r_start += (b.size + b.dt) as u64;
                     break
                 }
 
@@ -1431,7 +1424,6 @@ impl crate::cmap::chain::Chain {
                 }
                 curr_end = max(curr_end, inter_end);
             }
-            println!("curr={}, intervals.len()={}, curr_end={}, min_start={}, max_end={}", curr, intervals.len(), curr_end, min_start, max_end);
             // if the last interval has been passed after the inner for-loop, break the outer one
             if curr >= intervals.len() {println!("Last interval reached; r_start={}, r_block_end={}", r_start, r_block_end); break}
             // otherwise, update the next block's start point
@@ -1439,7 +1431,6 @@ impl crate::cmap::chain::Chain {
             // and the first interval's start point
             min_start  = *intervals[curr].start().unwrap();
         }
-        println!("END: curr={},  r_start={}, r_block_end={}, min_start={}, max_end={}", curr, r_start, r_block_end, min_start, max_end);
         Ok(output)
     }
 }
