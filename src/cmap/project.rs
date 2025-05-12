@@ -1212,7 +1212,7 @@ impl crate::cmap::chain::Chain {
                     } else {
                         // extrapolated sequence's length does not exceed the stated thresholds
                         if codirected {
-                            start_p = q_block_start - offset;
+                            start_p = q_block_end - offset;
                             // assign to a storage variable
                             output
                                 .entry(&inter.name().unwrap())
@@ -1222,7 +1222,7 @@ impl crate::cmap::chain::Chain {
                                     }
                                 );
                         } else {
-                            end_p = q_block_end + offset;
+                            end_p = q_block_start + offset;
                             // assign to a storage variable
                             output
                                 .entry(&inter.name().unwrap())
