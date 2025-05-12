@@ -945,33 +945,68 @@ impl crate::cmap::chain::Chain {
                     continue
                 };
 
-                // check whether the start coordinate is within the block
-                if (r_start <= inter_start) && (inter_start < r_block_end) {
-                    println!("BLOCK: inter_start={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", inter_start, r_start, r_block_end, q_block_start, q_block_end);
-                    //  start coordinate can be mapped
-                    let offset: u64 = inter_start - r_start;
-                    if codirected{
-                        start_p = q_block_start + offset;
-                        // assign to a storage variable
-                        output
-                            .entry(&inter_name)
-                            .and_modify(
-                                |x| {
-                                    x.update_start(start_p)
-                                }
-                            );
+                // first, process the marginal cases
+                // a special case for the first block which extends beyond the chain start
+                if h == 0 && inter_start < r_start {
+                    let offset: u64 = r_start - inter_start;
+                    // get the relative threshold size
+                    let rel_thresh: &u64 = rel_sizes
+                        .entry(
+                            inter_name // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
+                        )
+                        .or_insert((inter.length().unwrap()) * rel_threshold as u64);
+
+                    // check if the offset is within the stated extrapolation limits 
+                    if offset > abs_threshold && offset > *rel_thresh {
+                        // coordinate is too far to be extrapolated; crop to the chain block's start
+                        if codirected {
+                            start_p = q_block_start;
+                            // assign to a storage variable
+                            output
+                                .entry(&inter_name)
+                                .and_modify(
+                                    |x| {
+                                        x.update_start(start_p)
+                                    }
+                                );
+                        } else {
+                            end_p = q_block_end;
+                            // assign to a storage variable
+                            output
+                                .entry(&inter_name)
+                                .and_modify(
+                                    |x| {
+                                        x.update_end(end_p)
+                                    }
+                                );
+                        }
                     } else {
-                        end_p = q_block_end - offset;
-                        // assign to a storage variable
-                        output
-                            .entry(&inter_name)
-                            .and_modify(
-                                |x| {
-                                    x.update_end(end_p)
-                                }
-                            );
+                        // extrapolated sequence's length does not exceed the stated thresholds
+                        if codirected {
+                            start_p = q_block_start - offset;
+                            // assign to a storage variable
+                            output
+                                .entry(&inter_name)
+                                .and_modify(
+                                    |x| {
+                                        x.update_start(start_p)
+                                    }
+                                );
+                        } else {
+                            end_p = q_block_end + offset;
+                            // assign to a storage variable
+                            output
+                                .entry(&inter_name)
+                                .and_modify(
+                                    |x| {
+                                        x.update_end(end_p)
+                                    }
+                                );
+                        }
                     }
-                    // a special case for the last block; if interval end lies outside of the chain,
+                }
+
+                // a special case for the last block; if interval end lies outside of the chain,
                     // try extrapolating the coordinate unless it is too far from the chain 
                     if is_last_block && inter_end >  r_end {
                         // get the alignment offset
@@ -1032,6 +1067,33 @@ impl crate::cmap::chain::Chain {
                             }
                         }
                     }
+
+                // check whether the start coordinate is within the block
+                if (r_start <= inter_start) && (inter_start < r_block_end) {
+                    println!("BLOCK: inter_start={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", inter_start, r_start, r_block_end, q_block_start, q_block_end);
+                    //  start coordinate can be mapped
+                    let offset: u64 = inter_start - r_start;
+                    if codirected{
+                        start_p = q_block_start + offset;
+                        // assign to a storage variable
+                        output
+                            .entry(&inter_name)
+                            .and_modify(
+                                |x| {
+                                    x.update_start(start_p)
+                                }
+                            );
+                    } else {
+                        end_p = q_block_end - offset;
+                        // assign to a storage variable
+                        output
+                            .entry(&inter_name)
+                            .and_modify(
+                                |x| {
+                                    x.update_end(end_p)
+                                }
+                            );
+                    }
                 }
                 // then, check the end coordinate
                 if (r_start <= inter_end) && (inter_end < r_block_end) {
@@ -1060,65 +1122,6 @@ impl crate::cmap::chain::Chain {
                     }
                 }
 
-                // a special case for the first block which extends beyond the chain start
-                if h == 0 && inter_start < r_start {
-                    let offset: u64 = r_start - inter_start;
-                    // get the relative threshold size
-                    let rel_thresh: &u64 = rel_sizes
-                        .entry(
-                            inter_name // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
-                        )
-                        .or_insert((inter.length().unwrap()) * rel_threshold as u64);
-
-                    // check if the offset is within the stated extrapolation limits 
-                    if offset > abs_threshold && offset > *rel_thresh {
-                        // coordinate is too far to be extrapolated; crop to the chain block's start
-                        if codirected {
-                            start_p = q_block_start;
-                            // assign to a storage variable
-                            output
-                                .entry(&inter_name)
-                                .and_modify(
-                                    |x| {
-                                        x.update_start(start_p)
-                                    }
-                                );
-                        } else {
-                            end_p = q_block_end;
-                            // assign to a storage variable
-                            output
-                                .entry(&inter_name)
-                                .and_modify(
-                                    |x| {
-                                        x.update_end(end_p)
-                                    }
-                                );
-                        }
-                    } else {
-                        // extrapolated sequence's length does not exceed the stated thresholds
-                        if codirected {
-                            start_p = q_block_start - offset;
-                            // assign to a storage variable
-                            output
-                                .entry(&inter_name)
-                                .and_modify(
-                                    |x| {
-                                        x.update_start(start_p)
-                                    }
-                                );
-                        } else {
-                            end_p = q_block_end + offset;
-                            // assign to a storage variable
-                            output
-                                .entry(&inter_name)
-                                .and_modify(
-                                    |x| {
-                                        x.update_end(end_p)
-                                    }
-                                );
-                        }
-                    }
-                }
                 curr_end = max(curr_end, inter_end);
             }
 
