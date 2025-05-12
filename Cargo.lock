@@ -93,7 +93,7 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "chaintools"
-version = "0.1.29"
+version = "0.1.30"
 dependencies = [
  "anyhow",
  "bincode",
@@ -190,9 +190,9 @@ checksum = "248e3bacc7dc6baa3b21e405ee045c3047101a49145e7e9eca583ab4c2ca5345"
 
 [[package]]
 name = "cubiculum"
-version = "0.1.25"
+version = "0.1.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e7a6033ececbe34d353958ec32733cc845483f7851c79a9683326b4dd425844"
+checksum = "e435b7d19a93f0fdd280e2a2b8394da973a909d996a431706d77fc7955adf0af"
 dependencies = [
  "anyhow",
  "clap",

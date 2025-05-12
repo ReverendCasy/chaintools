@@ -1239,7 +1239,7 @@ impl crate::cmap::chain::Chain {
                 if (r_start <= inter_end) && (inter_end < r_block_end) {
                     println!("GAP: inter_end={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", inter_end, r_start, r_block_end, q_block_start, q_block_end);
                     coords_in_gap += 1;
-                    if coords_in_gap == 2 && !ignore_undefined {
+                    if coords_in_gap == 2 && ignore_undefined {
                         output
                             .entry(&inter.name().unwrap())
                             .and_modify(
@@ -1248,6 +1248,7 @@ impl crate::cmap::chain::Chain {
                                     x.reset_end()
                                 }
                             );
+                        // println!("RESETTING COORDS: {:#?}", output.get(&inter.name().unwrap()).unwrap());
                         continue
                     }
                     // get the alignment offset
