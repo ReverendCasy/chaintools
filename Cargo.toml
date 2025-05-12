@@ -18,7 +18,7 @@ anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 bincode = "1.3"
 flate2 = "1.0"
-cubiculum = "0.1.25"
+cubiculum = "0.1.27"
 genawaiter = "0.99.1"
 yield-return = "0.2.0"
 num-traits = "0.2.19"
