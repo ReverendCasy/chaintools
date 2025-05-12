@@ -865,7 +865,7 @@ impl crate::cmap::chain::Chain {
             if r_start > max_end {break};
             let mut r_block_end: u64 = r_start + (b.size as u64);
             // skip the block preceding the first interval's start in the reference
-            if r_block_end < min_start {
+            if r_block_end + (b.dt as u64) < min_start {
                 r_start += (b.size + b.dt) as u64;
                 q_start = if q_strand {q_start + (b.size + b.dq) as u64} else {q_start - (b.size + b.dq) as u64};
                 continue
