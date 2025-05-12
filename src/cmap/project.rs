@@ -919,11 +919,13 @@ impl crate::cmap::chain::Chain {
                 // since other are guaranteed to start at least in the same position,
                 // the current loop can be safely exited
                 if r_block_end < inter_start {
+                    println!("Bbbreakpoint!");
                     // the pointer can be updated here, but only if the next block is guaranteed to lie further 
                     // downstream to the previous interval;
                     // since the chain block are sorted and do not overlap, the easiest way to prove it
                     // is to check whether the current block's end does not end within the current interval group 
                     if r_block_end >= curr_end {
+                        println!("Breakpoint pointer update: i={}, curr={}, b={}, r_start={}, r_block_end={}, inter_start={}, inter_end={}, inter_name={}", i, curr, h, r_start, r_block_end, inter_start, inter_end, inter_name);
                         curr = i
                     }
                     // potentially this is the farthest the intervals have ever reached 
@@ -939,6 +941,7 @@ impl crate::cmap::chain::Chain {
                 // chain block is downstream to the current interval;
                 // nothing to do here, proceed to the next interval;
                 if r_start > inter_end {
+                    println!("Continue point; i={}, curr={}, inter_name={}", i, curr, inter_name);
                     // if inter_end == curr_end {
                     //     curr += 1;
                     // }
