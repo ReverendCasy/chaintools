@@ -942,7 +942,7 @@ impl crate::cmap::chain::Chain {
 
                 // check whether the start coordinate is within the block
                 if (r_start <= inter_start) && (inter_start < r_block_end) {
-                    // println!("BLOCK inter_start={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", inter_start, r_start, r_block_end, q_block_start, q_block_end);
+                    println!("BLOCK: inter_start={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", inter_start, r_start, r_block_end, q_block_start, q_block_end);
                     //  start coordinate can be mapped
                     let offset: u64 = inter_start - r_start;
                     if codirected{
@@ -1030,7 +1030,7 @@ impl crate::cmap::chain::Chain {
                 }
                 // then, check the end coordinate
                 if (r_start <= inter_end) && (inter_end < r_block_end) {
-                    // println!("BLOCK: inter_end={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}, codirected={}", inter_end, r_start, r_block_end, q_block_start, q_block_end, codirected);
+                    println!("BLOCK: inter_end={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}, codirected={}", inter_end, r_start, r_block_end, q_block_start, q_block_end, codirected);
                     let offset: u64 = r_block_end - inter_end;
                     if codirected {
                         end_p = q_block_end - offset;
@@ -1174,7 +1174,7 @@ impl crate::cmap::chain::Chain {
 
                 // start coordinate is within the alignment gap
                 if (r_start <= inter_start) && (inter_start < r_block_end) {
-                    // println!("GAP: inter_start={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", inter_start, r_start, r_block_end, q_block_start, q_block_end);
+                    println!("GAP: inter_start={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", inter_start, r_start, r_block_end, q_block_start, q_block_end);
                     coords_in_gap += 1;
                     // get the alignment offset
                     let offset: u64 = r_block_end - inter_start;//inter_start - r_start;
@@ -1237,7 +1237,7 @@ impl crate::cmap::chain::Chain {
 
                 // and the same for end coordinate
                 if (r_start <= inter_end) && (inter_end < r_block_end) {
-                    // println!("GAP: inter_end={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", inter_end, r_start, r_block_end, q_block_start, q_block_end);
+                    println!("GAP: inter_end={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", inter_end, r_start, r_block_end, q_block_start, q_block_end);
                     coords_in_gap += 1;
                     if coords_in_gap == 2 && !ignore_undefined {
                         output
