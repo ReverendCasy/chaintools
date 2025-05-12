@@ -819,7 +819,9 @@ impl crate::cmap::chain::Chain {
         let mut min_start: u64 = *intervals[0].start().with_context(||
             {"Cannot map intervals with undefined coordinates"}
         )?;
-        let max_end: u64 = *intervals[intervals.len() - 1].end().with_context(||
+        // note, however,  that the elements are sorted by the start coordinate alone,
+        // so the last element must not necessarily end farthest
+        let mut max_end: u64 = *intervals[intervals.len() - 1].end().with_context(||
             {"Cannot map intervals with undefined coordinates"}
         )?;
         // create a smart iteration index; iteration will always start from this interval
@@ -1130,6 +1132,7 @@ impl crate::cmap::chain::Chain {
                 }
 
                 curr_end = max(curr_end, inter_end);
+                max_end = max(curr_end, max_end);
             }
 
 
@@ -1326,6 +1329,7 @@ impl crate::cmap::chain::Chain {
                     }
                 }
                 curr_end = max(curr_end, inter_end);
+                max_end = max(curr_end, max_end);
             }
 
             // if all the transcripts have been inspected, break the outer loop
@@ -1379,7 +1383,9 @@ impl crate::cmap::chain::Chain {
         let mut min_start: u64 = *intervals[0].start().with_context(||
             {"Cannot assess coverage for intervals with undefined coordinates"}
         )?;
-        let max_end: u64 = *intervals[intervals.len() - 1].end().with_context(||
+        // note, however,  that the elements are sorted by the start coordinate alone,
+        // so the last element must not necessarily end farthest
+        let mut max_end: u64 = *intervals[intervals.len() - 1].end().with_context(||
             {"Cannot assess coverage for intervals with undefined coordinates"}
         )?;
         // create a smart iteration index; iteration will always start from this interval
@@ -1476,6 +1482,7 @@ impl crate::cmap::chain::Chain {
                     None => {}
                 }
                 curr_end = max(curr_end, inter_end);
+                max_end = max(curr_end, max_end);
             }
             // if the last interval has been passed after the inner for-loop, break the outer one
             if curr >= intervals.len() {println!("Last interval reached; r_start={}, r_block_end={}", r_start, r_block_end); break}
