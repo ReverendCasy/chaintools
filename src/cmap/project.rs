@@ -918,6 +918,13 @@ impl crate::cmap::chain::Chain {
                 // since other are guaranteed to start at least in the same position,
                 // the current loop can be safely exited
                 if r_block_end < inter_start {
+                    // the pointer can be updated here, but only if the next block is guaranteed to lie further 
+                    // downstream to the previous interval;
+                    // since the chain block are sorted and do not overlap, the easiest way to prove it
+                    // is to check whether the current block's end does not end within the current interval group 
+                    if r_block_end >= curr_end {
+                        curr = i
+                    }
                     // potentially this is the farthest the intervals have ever reached 
                     // in terms of the  end coordinate; unless this boundary is exceeded, 
                     // the iteration start point will not be updated
@@ -927,18 +934,6 @@ impl crate::cmap::chain::Chain {
                     }
                     break
                 }
-
-                // chain block is downstream to the current interval;
-                // nothing to do here, proceed to the next interval;
-                if r_start > inter_end {
-                    // if this interval is not a boundary of the current overlap group,
-                    // current transcript pointer can be safely updated;
-                    // the next iteration will start downstream to this interval or a nested interval group
-                    if inter_end < curr_end {
-                        curr += 1;
-                    }
-                    continue
-                };
 
                 // check whether the start coordinate is within the block
                 if (r_start <= inter_start) && (inter_start < r_block_end) {
@@ -1114,6 +1109,7 @@ impl crate::cmap::chain::Chain {
                         }
                     }
                 }
+                curr_end = max(curr_end, inter_end);
             }
 
 
@@ -1309,6 +1305,7 @@ impl crate::cmap::chain::Chain {
                         }
                     }
                 }
+                curr_end = max(curr_end, inter_end);
             }
 
             // if all the transcripts have been inspected, break the outer loop
