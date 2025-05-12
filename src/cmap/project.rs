@@ -947,9 +947,10 @@ impl crate::cmap::chain::Chain {
                 // nothing to do here, proceed to the next interval;
                 if r_start > inter_end {
                     println!("Continue point; i={}, curr={}, inter_name={}", i, curr, inter_name);
-                    // if inter_end == curr_end {
-                    //     curr += 1;
-                    // }
+                    // increase the pointer if this is the current leading interval
+                    if inter_end == curr_end {
+                        curr += 1;
+                    }
                     continue
                 };
 
@@ -1163,6 +1164,7 @@ impl crate::cmap::chain::Chain {
             }
 
 
+
             // now, iterate through the remaining intervals again,
             // this time for the chain gap
             for (mut i, inter) in intervals[curr..].iter().enumerate() {
@@ -1174,6 +1176,9 @@ impl crate::cmap::chain::Chain {
                 )?;
                 let inter_end: u64 = *inter.end().with_context(||
                     {format!("Interval {} has an undefined end coordinate which cannot be mapped", i)}
+                )?;
+                let inter_name = inter.name().with_context(||
+                    {format!("Interval {} has an undefined name value; cannot assign projected coordinates", i)}
                 )?;
                 // add a results block to the the output hash map
                 if !output.contains_key(&inter.name().unwrap()) {
@@ -1190,6 +1195,37 @@ impl crate::cmap::chain::Chain {
                             }
                         );
                 }
+
+                // again, break if interval iterator has passed the current block 
+                if r_block_end < inter_start {
+                    println!("Bbbreakpoint!");
+                    // the pointer can be updated here, but only if the next block is guaranteed to lie further 
+                    // downstream to the previous interval;
+                    // since the chain block are sorted and do not overlap, the easiest way to prove it
+                    // is to check whether the current block's end does not end within the current interval group 
+                    if r_block_end >= curr_end {
+                        println!("Breakpoint pointer update: i={}, curr={}, b={}, r_start={}, r_block_end={}, inter_start={}, inter_end={}, inter_name={}", i, curr, h, r_start, r_block_end, inter_start, inter_end, inter_name);
+                        curr = i
+                    }
+                    // potentially this is the farthest the intervals have ever reached 
+                    // in terms of the  end coordinate; unless this boundary is exceeded, 
+                    // the iteration start point will not be updated
+                    if inter_end >= curr_end {
+                        // curr = i;
+                        curr_end = inter_end;
+                    }
+                    break
+                }
+
+                // continue if the interval iterator has not yet reached the block
+                if r_start > inter_end {
+                    println!("Continue point; i={}, curr={}, inter_name={}", i, curr, inter_name);
+                    // increase the pointer if this is the current leading interval
+                    if inter_end == curr_end {
+                        curr += 1;
+                    }
+                    continue
+                };
 
                 // start coordinate is within the alignment gap
                 if (r_start <= inter_start) && (inter_start < r_block_end) {
