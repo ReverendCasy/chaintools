@@ -1244,7 +1244,7 @@ impl crate::cmap::chain::Chain {
                             .entry(&inter.name().unwrap())
                             .and_modify(
                                 |x| {
-                                    x.reset_end();
+                                    x.reset_start();
                                     x.reset_end()
                                 }
                             );
