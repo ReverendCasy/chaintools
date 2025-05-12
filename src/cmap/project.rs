@@ -954,6 +954,10 @@ impl crate::cmap::chain::Chain {
                     // increase the pointer if this is the current leading interval
                     if inter_end == curr_end {
                         curr += 1;
+                        if curr >= intervals.len() {
+                            println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
+                            break
+                        };
                     }
                     continue
                 };
@@ -1236,6 +1240,10 @@ impl crate::cmap::chain::Chain {
                     // increase the pointer if this is the current leading interval
                     if inter_end == curr_end {
                         curr += 1;
+                        if curr >= intervals.len() {
+                            println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
+                            break
+                        };
                     }
                     continue
                 };
