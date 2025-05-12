@@ -1017,7 +1017,7 @@ impl crate::cmap::chain::Chain {
 
                 // a special case for the last block; if interval end lies outside of the chain,
                 // try extrapolating the coordinate unless it is too far from the chain 
-                if is_last_block && inter_end >  r_end {
+                if is_last_block && inter_end >=  r_end {
                     println!();
                     // get the alignment offset
                     let offset: u64 = inter_end - r_block_end;
