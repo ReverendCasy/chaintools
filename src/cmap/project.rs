@@ -1163,6 +1163,11 @@ impl crate::cmap::chain::Chain {
                 continue
             }
 
+            // current interval can be potentially exceeded at this point; exit if so
+            if curr >= intervals.len() {
+                println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
+                break
+            };
 
 
             // now, iterate through the remaining intervals again,
