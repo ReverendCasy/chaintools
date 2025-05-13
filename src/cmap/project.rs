@@ -862,7 +862,7 @@ impl crate::cmap::chain::Chain {
         // now, iterate over alignment records
         let mut b_num: u64 = 1;
         // TODO: Implement to_blocks() as yielder to avoid code repetition
-        for (h, b) in self.alignment.iter().enumerate() {
+        'outer: for (h, b) in self.alignment.iter().enumerate() {
             // break if the iterator has passed beyond the last interval
             if r_start > max_end {
                 println!("All blocks passed; r_start={}, r_block_end={}", r_start, r_start + (b.size as u64));
@@ -934,7 +934,7 @@ impl crate::cmap::chain::Chain {
                         curr = i;
                         if curr >= intervals.len() {
                             println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
-                            break
+                            break 'outer
                         };
                     }
                     // potentially this is the farthest the intervals have ever reached 
@@ -956,7 +956,7 @@ impl crate::cmap::chain::Chain {
                         curr += 1;
                         if curr >= intervals.len() {
                             println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
-                            break
+                            break 'outer
                         };
                     }
                     continue
@@ -1174,7 +1174,7 @@ impl crate::cmap::chain::Chain {
             // current interval can be potentially exceeded at this point; exit if so
             if curr >= intervals.len() {
                 println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
-                break
+                break 'outer
             };
 
 
@@ -1221,7 +1221,7 @@ impl crate::cmap::chain::Chain {
                         curr = i;
                         if curr >= intervals.len() {
                             println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
-                            break
+                            break 'outer
                         };
                     }
                     // potentially this is the farthest the intervals have ever reached 
@@ -1242,7 +1242,7 @@ impl crate::cmap::chain::Chain {
                         curr += 1;
                         if curr >= intervals.len() {
                             println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
-                            break
+                            break 'outer
                         };
                     }
                     continue
