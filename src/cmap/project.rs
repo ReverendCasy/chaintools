@@ -865,7 +865,7 @@ impl crate::cmap::chain::Chain {
         'outer: for (h, b) in self.alignment.iter().enumerate() {
             // break if the iterator has passed beyond the last interval
             if r_start > max_end {
-                println!("All blocks passed; r_start={}, r_block_end={}", r_start, r_start + (b.size as u64));
+                // println!("All blocks passed; r_start={}, r_block_end={}", r_start, r_start + (b.size as u64));
                 break
             };
             let mut r_block_end: u64 = r_start + (b.size as u64);
@@ -924,16 +924,16 @@ impl crate::cmap::chain::Chain {
                 // since other are guaranteed to start at least in the same position,
                 // the current loop can be safely exited
                 if r_block_end < inter_start {
-                    println!("Bbbreakpoint!");
+                    // println!("Bbbreakpoint!"); X
                     // the pointer can be updated here, but only if the next block is guaranteed to lie further 
                     // downstream to the previous interval;
                     // since the chain block are sorted and do not overlap, the easiest way to prove it
                     // is to check whether the current block's end does not end within the current interval group 
                     if r_block_end > curr_end {
-                        println!("Breakpoint pointer update: i={}, curr={}, b={}, r_start={}, r_block_end={}, inter_start={}, inter_end={}, inter_name={}", i, curr, h, r_start, r_block_end, inter_start, inter_end, inter_name);
+                        // println!("Breakpoint pointer update: i={}, curr={}, b={}, r_start={}, r_block_end={}, inter_start={}, inter_end={}, inter_name={}", i, curr, h, r_start, r_block_end, inter_start, inter_end, inter_name); X
                         curr = i;
                         if curr >= intervals.len() {
-                            println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
+                            // println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end); X
                             break 'outer
                         };
                     }
@@ -955,7 +955,7 @@ impl crate::cmap::chain::Chain {
                     if inter_end == curr_end {
                         curr += 1;
                         if curr >= intervals.len() {
-                            println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
+                            // println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end); X
                             break 'outer
                         };
                     }
@@ -1088,7 +1088,7 @@ impl crate::cmap::chain::Chain {
 
                 // check whether the start coordinate is within the block
                 if (r_start <= inter_start) && (inter_start < r_block_end) {
-                    println!("BLOCK: inter_start={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}, i={}, inter_name={}", inter_start, r_start, r_block_end, q_block_start, q_block_end, i, inter_name);
+                    // println!("BLOCK: inter_start={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}, i={}, inter_name={}", inter_start, r_start, r_block_end, q_block_start, q_block_end, i, inter_name); X
                     //  start coordinate can be mapped
                     let offset: u64 = inter_start - r_start;
                     if codirected{
@@ -1115,7 +1115,7 @@ impl crate::cmap::chain::Chain {
                 }
                 // then, check the end coordinate
                 if (r_start <= inter_end) && (inter_end < r_block_end) {
-                    println!("BLOCK: inter_end={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}, codirected={}, i={}, inter_name={}", inter_end, r_start, r_block_end, q_block_start, q_block_end, codirected, i, inter_name);
+                    // println!("BLOCK: inter_end={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}, codirected={}, i={}, inter_name={}", inter_end, r_start, r_block_end, q_block_start, q_block_end, codirected, i, inter_name); X
                     let offset: u64 = r_block_end - inter_end;
                     if codirected {
                         end_p = q_block_end - offset;
@@ -1173,7 +1173,7 @@ impl crate::cmap::chain::Chain {
 
             // current interval can be potentially exceeded at this point; exit if so
             if curr >= intervals.len() {
-                println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
+                // println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end); X
                 break 'outer
             };
 
@@ -1211,16 +1211,16 @@ impl crate::cmap::chain::Chain {
 
                 // again, break if interval iterator has passed the current block 
                 if r_block_end < inter_start {
-                    println!("Bbbreakpoint!");
+                    // println!("Bbbreakpoint!");
                     // the pointer can be updated here, but only if the next block is guaranteed to lie further 
                     // downstream to the previous interval;
                     // since the chain block are sorted and do not overlap, the easiest way to prove it
                     // is to check whether the current block's end does not end within the current interval group 
                     if r_block_end > curr_end {
-                        println!("Breakpoint pointer update: i={}, curr={}, b={}, r_start={}, r_block_end={}, inter_start={}, inter_end={}, inter_name={}", i, curr, h, r_start, r_block_end, inter_start, inter_end, inter_name);
+                        // println!("Breakpoint pointer update: i={}, curr={}, b={}, r_start={}, r_block_end={}, inter_start={}, inter_end={}, inter_name={}", i, curr, h, r_start, r_block_end, inter_start, inter_end, inter_name); X
                         curr = i;
                         if curr >= intervals.len() {
-                            println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
+                            // println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end); X
                             break 'outer
                         };
                     }
@@ -1236,12 +1236,12 @@ impl crate::cmap::chain::Chain {
 
                 // continue if the interval iterator has not yet reached the block
                 if r_start > inter_end {
-                    println!("Continue point; i={}, curr={}, inter_name={}", i, curr, inter_name);
+                    // println!("Continue point; i={}, curr={}, inter_name={}", i, curr, inter_name); X
                     // increase the pointer if this is the current leading interval
                     if inter_end == curr_end {
                         curr += 1;
                         if curr >= intervals.len() {
-                            println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
+                            // println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end); X
                             break 'outer
                         };
                     }
@@ -1250,7 +1250,7 @@ impl crate::cmap::chain::Chain {
 
                 // start coordinate is within the alignment gap
                 if (r_start <= inter_start) && (inter_start < r_block_end) {
-                    println!("GAP: inter_start={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}, i={}, inter_name={}", inter_start, r_start, r_block_end, q_block_start, q_block_end, i, inter_name);
+                    // println!("GAP: inter_start={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}, i={}, inter_name={}", inter_start, r_start, r_block_end, q_block_start, q_block_end, i, inter_name); X
                     coords_in_gap += 1;
                     // get the alignment offset
                     let offset: u64 = r_block_end - inter_start;//inter_start - r_start;
@@ -1313,7 +1313,7 @@ impl crate::cmap::chain::Chain {
 
                 // and the same for end coordinate
                 if (r_start <= inter_end) && (inter_end < r_block_end) {
-                    println!("GAP: inter_end={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}, i={}, inter_name={}", inter_end, r_start, r_block_end, q_block_start, q_block_end, i, inter_name);
+                    // println!("GAP: inter_end={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}, i={}, inter_name={}", inter_end, r_start, r_block_end, q_block_start, q_block_end, i, inter_name); X
                     coords_in_gap += 1;
                     if coords_in_gap == 2 && ignore_undefined {
                         output
@@ -1391,7 +1391,7 @@ impl crate::cmap::chain::Chain {
 
             // if all the transcripts have been inspected, break the outer loop
             if curr >= intervals.len() {
-                println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
+                // println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end); X
                 break
             };
             // update the absolute start of all the transcripts intervals
