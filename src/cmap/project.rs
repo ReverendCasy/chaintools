@@ -950,7 +950,7 @@ impl crate::cmap::chain::Chain {
                 // chain block is downstream to the current interval;
                 // nothing to do here, proceed to the next interval;
                 if r_start > inter_end {
-                    println!("Continue point; i={}, curr={}, inter_name={}", i, curr, inter_name);
+                    // println!("Continue point; i={}, curr={}, inter_name={}", i, curr, inter_name); X
                     // increase the pointer if this is the current leading interval
                     if inter_end == curr_end {
                         curr += 1;
