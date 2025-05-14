@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use cubiculum::merge::merge::intersection;
 use cubiculum::structs::structs::{Coordinates, Interval, Named};
 use fxhash::FxHashMap;
-use std::cmp::{max, Ord};
+use std::cmp::{max, min, Ord};
 use std::fmt::Debug;
 use yield_return::LocalIter;
 
@@ -851,6 +851,10 @@ impl crate::cmap::chain::Chain {
             true => self.query.start,
             false => self.query.size - self.query.start
         };
+        let query_end  = match q_strand {
+            true => self.query.end,
+            false => self.query.size - self.query.end
+        };
         let mut q_block_start: u64;
         let mut q_block_end: u64;
 
@@ -987,7 +991,7 @@ impl crate::cmap::chain::Chain {
                                     }
                                 );
                         } else {
-                            end_p = q_block_end;
+                            end_p = min(q_block_end, query_end);
                             // assign to a storage variable
                             output
                                 .entry(&inter_name)
@@ -1010,7 +1014,7 @@ impl crate::cmap::chain::Chain {
                                     }
                                 );
                         } else {
-                            end_p = q_block_end + offset;
+                            end_p = min(q_block_end + offset, query_end);
                             // assign to a storage variable
                             output
                                 .entry(&inter_name)
@@ -1039,7 +1043,7 @@ impl crate::cmap::chain::Chain {
                     if offset > abs_threshold && offset > *rel_thresh {
                         // coordinate is too far to be extrapolated; crop to the chain block's start
                         if codirected {
-                            end_p = q_block_end;
+                            end_p = min(q_block_end, query_end);
                             // assign to a storage variable
                             output
                                 .entry(&inter_name)
@@ -1062,7 +1066,7 @@ impl crate::cmap::chain::Chain {
                     } else {
                         // extrapolated sequence's length does not exceed the stated thresholds
                         if codirected {
-                            end_p = q_block_end + offset;
+                            end_p = min(q_block_end + offset, query_end);
                             // assign to a storage variable
                             output
                                 .entry(&inter_name)
@@ -1101,7 +1105,7 @@ impl crate::cmap::chain::Chain {
                                 }
                             );
                     } else {
-                        end_p = q_block_end - offset;
+                        end_p = min(q_block_end - offset, query_end);
                         // assign to a storage variable
                         output
                             .entry(&inter_name)
@@ -1117,7 +1121,7 @@ impl crate::cmap::chain::Chain {
                     // println!("BLOCK: inter_end={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}, codirected={}, i={}, inter_name={}", inter_end, r_start, r_block_end, q_block_start, q_block_end, codirected, i, inter_name); X
                     let offset: u64 = r_block_end - inter_end;
                     if codirected {
-                        end_p = q_block_end - offset;
+                        end_p = min(q_block_end - offset, query_end);
                         // assign to a storage variable
                         output
                             .entry(&inter_name)
@@ -1274,7 +1278,7 @@ impl crate::cmap::chain::Chain {
                                     }
                                 );
                         } else {
-                            end_p = q_block_end;
+                            end_p = min(q_block_end, query_end);
                             // assign to a storage variable
                             output
                                 .entry(&inter.name().unwrap())
@@ -1297,7 +1301,7 @@ impl crate::cmap::chain::Chain {
                                     }
                                 );
                         } else {
-                            end_p = q_block_start + offset;
+                            end_p = min(query_end, q_block_start + offset);
                             // assign to a storage variable
                             output
                                 .entry(&inter.name().unwrap())
@@ -1339,7 +1343,7 @@ impl crate::cmap::chain::Chain {
                     if offset > abs_threshold && offset > *rel_thresh {
                         // coordinate is too far to be extrapolated; crop to the chain block's start
                         if codirected {
-                            end_p = q_block_end;
+                            end_p = min(q_block_end, query_end);
                             // assign to a storage variable
                             output
                                 .entry(&inter.name().unwrap())
@@ -1362,7 +1366,7 @@ impl crate::cmap::chain::Chain {
                     } else {
                         // extrapolated sequence's length does not exceed the stated thresholds
                         if codirected {
-                            end_p = q_block_start + offset;
+                            end_p = min(q_block_start + offset, query_end);
                             // assign to a storage variable
                             output
                                 .entry(&inter.name().unwrap())
