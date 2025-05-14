@@ -853,7 +853,7 @@ impl crate::cmap::chain::Chain {
         };
         let query_end  = match q_strand {
             true => self.query.end,
-            false => self.query.size - self.query.end
+            false => self.query.size - self.query.start
         };
         let mut q_block_start: u64;
         let mut q_block_end: u64;
