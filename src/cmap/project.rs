@@ -469,7 +469,7 @@ impl crate::cmap::chain::Chain {
                                     .entry(
                                         inter.name().unwrap_or("a") // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
                                     )
-                                    .or_insert(inter.length().unwrap() * rel_threshold as u64);
+                                    .or_insert((inter.length().unwrap() as f64 * rel_threshold) as u64);
                                 
                                 // check if the offset is within the stated extrapolation limits 
                                 if offset > abs_threshold && offset > *rel_thresh {
@@ -555,7 +555,7 @@ impl crate::cmap::chain::Chain {
                                 .entry(
                                     inter.name().unwrap_or("a") // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
                                 )
-                                .or_insert((inter.length().unwrap()) * rel_threshold as u64);
+                                .or_insert((inter.length().unwrap() as f64 * rel_threshold) as u64);
         
                             // check if the offset is within the stated extrapolation limits 
                             if offset > abs_threshold && offset > *rel_thresh {
@@ -642,7 +642,7 @@ impl crate::cmap::chain::Chain {
                                 .entry(
                                     inter.name().unwrap_or("a") // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
                                 )
-                                .or_insert((inter.length().unwrap()) * rel_threshold as u64);
+                                .or_insert((inter.length().unwrap() as f64 * rel_threshold) as u64);
         
                             // check if the offset is within the stated extrapolation limits 
                             if offset > abs_threshold && offset > *rel_thresh {
@@ -703,7 +703,7 @@ impl crate::cmap::chain::Chain {
                                 .entry(
                                     inter.name().unwrap_or("a") // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
                                 )
-                                .or_insert(inter.length().unwrap() * rel_threshold as u64);
+                                .or_insert((inter.length().unwrap() as f64 * rel_threshold) as u64);
                             
                             // check if the offset is within the stated extrapolation limits 
                             if offset > abs_threshold && offset > *rel_thresh {
@@ -975,7 +975,7 @@ impl crate::cmap::chain::Chain {
                         .entry(
                             inter_name // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
                         )
-                        .or_insert((inter.length().unwrap()) * rel_threshold as u64);
+                        .or_insert((inter.length().unwrap() as f64 * rel_threshold) as u64);
 
                     // check if the offset is within the stated extrapolation limits 
                     if offset > abs_threshold && offset > *rel_thresh {
@@ -1037,7 +1037,7 @@ impl crate::cmap::chain::Chain {
                         .entry(
                             inter_name // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
                         )
-                        .or_insert(inter.length().unwrap() * rel_threshold as u64);
+                        .or_insert((inter.length().unwrap() as f64 * rel_threshold) as u64);
                     
                     // check if the offset is within the stated extrapolation limits 
                     if offset > abs_threshold && offset > *rel_thresh {
@@ -1262,7 +1262,7 @@ impl crate::cmap::chain::Chain {
                         .entry(
                             inter.name().unwrap_or("a") // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
                         )
-                        .or_insert((inter.length().unwrap()) * rel_threshold as u64);
+                        .or_insert((inter.length().unwrap() as f64 * rel_threshold) as u64);
 
                     // check if the offset is within the stated extrapolation limits 
                     if offset > abs_threshold && offset > *rel_thresh {
@@ -1337,7 +1337,7 @@ impl crate::cmap::chain::Chain {
                         .entry(
                             inter.name().unwrap_or("a") // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
                         )
-                        .or_insert(inter.length().unwrap() * rel_threshold as u64);
+                        .or_insert((inter.length().unwrap() as f64 * rel_threshold) as u64);
                     
                     // check if the offset is within the stated extrapolation limits 
                     if offset > abs_threshold && offset > *rel_thresh {
