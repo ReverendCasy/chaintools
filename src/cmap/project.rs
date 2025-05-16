@@ -968,7 +968,7 @@ impl crate::cmap::chain::Chain {
 
                 // first, process the marginal cases
                 // a special case for the first block which extends beyond the chain start
-                if h == 0 && inter_start < r_start {
+                if h == 0 && inter_start < r_start && inter_end >= r_start {
                     let offset: u64 = r_start - inter_start;
                     // get the relative threshold size
                     let rel_thresh: &u64 = rel_sizes
@@ -1029,7 +1029,7 @@ impl crate::cmap::chain::Chain {
 
                 // a special case for the last block; if interval end lies outside of the chain,
                 // try extrapolating the coordinate unless it is too far from the chain 
-                if is_last_block && inter_end >= r_end {
+                if is_last_block && inter_end >= r_end && inter_start < r_end {
                     // get the alignment offset
                     let offset: u64 = inter_end - r_block_end;
                     // get the relative threshold size
