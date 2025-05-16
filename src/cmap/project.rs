@@ -1004,7 +1004,7 @@ impl crate::cmap::chain::Chain {
                     } else {
                         // extrapolated sequence's length does not exceed the stated thresholds
                         if codirected {
-                            start_p = q_block_start - offset;
+                            start_p = q_block_start.checked_sub(offset).unwrap_or(0);
                             // assign to a storage variable
                             output
                                 .entry(&inter_name)
@@ -1076,7 +1076,7 @@ impl crate::cmap::chain::Chain {
                                     }
                                 );
                         } else {
-                            start_p = q_block_start - offset;
+                            start_p = q_block_start.checked_sub(offset).unwrap_or(0);
                             // assign to a storage variable
                             output
                                 .entry(&inter_name)
@@ -1121,7 +1121,7 @@ impl crate::cmap::chain::Chain {
                     // println!("BLOCK: inter_end={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}, codirected={}, i={}, inter_name={}", inter_end, r_start, r_block_end, q_block_start, q_block_end, codirected, i, inter_name); X
                     let offset: u64 = r_block_end - inter_end;
                     if codirected {
-                        end_p = min(q_block_end - offset, query_end);
+                        end_p = min(q_block_end.checked_sub(offset).unwrap_or(0), query_end);
                         // assign to a storage variable
                         output
                             .entry(&inter_name)
@@ -1291,7 +1291,7 @@ impl crate::cmap::chain::Chain {
                     } else {
                         // extrapolated sequence's length does not exceed the stated thresholds
                         if codirected {
-                            start_p = q_block_end - offset;
+                            start_p = q_block_end.checked_sub(offset).unwrap_or(0);
                             // assign to a storage variable
                             output
                                 .entry(&inter.name().unwrap())
@@ -1376,7 +1376,7 @@ impl crate::cmap::chain::Chain {
                                     }
                                 );
                         } else {
-                            start_p = q_block_end - offset;
+                            start_p = q_block_end.checked_sub(offset).unwrap_or(0);
                             // assign to a storage variable
                             output
                                 .entry(&inter.name().unwrap())
