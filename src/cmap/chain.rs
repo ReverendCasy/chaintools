@@ -571,6 +571,22 @@ impl Chain {
         }
         blocks
     }
+
+    /// Get the total sum of aligned blocks lengths
+    /// 
+    /// # Arguments
+    /// `self` - A Chain object
+    /// 
+    /// # Returns
+    /// A u64 integer value of the aligned chain fraction
+    /// 
+    pub fn alignment_sum(&self) -> u64 {
+        let mut aln_sum: u64 = 0;
+        for b in &self.alignment {
+            aln_sum += b.size as u64
+        }
+        return aln_sum
+    }
 }
 
 /// A ref/query chain head object.
