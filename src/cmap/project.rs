@@ -1511,7 +1511,7 @@ impl crate::cmap::chain::Chain {
                     // since the chain block are sorted and do not overlap, the easiest way to prove it
                     // is to check whether the current block's end does not end within the current interval group 
                     if r_block_end >= curr_end {
-                        // curr = i // UNCOMMENT
+                        curr = i
                     }
                     // potentially this is the farthest the intervals have ever reached 
                     // in terms of the  end coordinate; unless this boundary is exceeded, 
@@ -1520,7 +1520,7 @@ impl crate::cmap::chain::Chain {
                         // curr = i;
                         curr_end = inter_end;
                     }
-                    // break // UNCOMMENT
+                    break
                 }
 
                 // chain block is downstream to the current interval;
