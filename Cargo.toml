@@ -1,6 +1,6 @@
 [package]
 name = "chaintools"
-version = "0.1.55"
+version = "0.1.56"
 authors = ["alejandrogzi <alejandrxgzi@gmail.com>"]
 edition = "2021"
 license = "MIT"

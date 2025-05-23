@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use cubiculum::merge::merge::intersection;
-use cubiculum::structs::structs::{Coordinates, Interval, Named};
+use cubiculum::structs::structs::{BedEntry, Coordinates, Interval, Named};
 use fxhash::FxHashMap;
 use std::cmp::{max, min, Ord};
 use std::fmt::Debug;
@@ -17,6 +17,8 @@ impl crate::cmap::chain::Chain {
     /// `is_ref`: boolean value indicating whether reference coordinates should be used for the chain;
     /// using query coordinates otherwise
     /// 
+    /// # Returns
+    /// A Vector of Interval objects whose coordinates overlap the chain span 
     /// 
     pub fn intersect_to_vector<T>(&self, intervals: &Vec<T>, to_ref: bool) -> Vec<T>
     where 
@@ -45,6 +47,45 @@ impl crate::cmap::chain::Chain {
         output
 
     }
+
+    /// [YM] Am implementation of intersect_to_vector() designed for BED8+ BedEntry objects
+    /// 
+    /// # Arguments
+    /// `intervals`: A vector of BedEntry objects. All items are expected to be in BED8+ format 
+    /// and have defined thickStart and thickEnd coordinates
+    /// `is_ref`: boolean value indicating whether reference coordinates should be used for the chain;
+    /// using query coordinates otherwise
+    /// 
+    /// # Returns
+    /// A Vector of BedEntry objects whose coding ('thick') intervals overlap the chain span 
+    /// 
+    pub fn intersect_to_cds_vector(&self, intervals: &Vec<BedEntry>, to_ref: bool) -> Vec<BedEntry>
+    {
+        let mut output: Vec<BedEntry> = Vec::<BedEntry>::new();
+        let start: u64 = if to_ref {self.refs.start} else {
+            if self.query.strand == '+' {self.query.start} else {self.query.size - self.query.end}
+        };
+        let end: u64 = if to_ref {self.refs.end} else {
+            if self.query.strand == '+' {self.query.end} else {self.query.size - self.query.start}
+        };
+        for i in intervals {
+            if i.format() < 8 {continue}
+            let inter_start = match i.thick_start() {
+                Some(x) => {x},
+                None => continue
+            };
+            if inter_start > end {break}
+            let inter_end = match i.thick_end() {
+                Some(x) => {x},
+                None => continue
+            };
+            if inter_end < start {continue};
+            output.push(i.clone());
+        }
+        output
+
+    }
+
     /// [YM - A first attempt at block yielder]
     /// A 'yielding' version of to_blocks() from cmap::chain; 
     /// returns blocks as a generator-like object of Futures;
@@ -864,7 +905,6 @@ impl crate::cmap::chain::Chain {
 
         // all set
         // now, iterate over alignment records
-        let mut b_num: u64 = 1;
         // TODO: Implement to_blocks() as yielder to avoid code repetition
         'outer: for (h, b) in self.alignment.iter().enumerate() {
             // break if the iterator has passed beyond the last interval
@@ -1170,7 +1210,6 @@ impl crate::cmap::chain::Chain {
             if b.dt == 0 {
                 r_start += b.dt as u64;
                 q_start = if q_strand {q_start + b.dq as u64} else {q_start - b.dq as u64};
-                b_num += 1;
                 continue
             }
 
@@ -1405,7 +1444,6 @@ impl crate::cmap::chain::Chain {
             // proceed to the next line
             r_start += b.dt as u64;
             q_start = if q_strand {q_start + b.dq as u64} else {q_start - b.dq as u64};
-            b_num += 1;
         }
         Ok(output)
     }
@@ -1495,9 +1533,9 @@ impl crate::cmap::chain::Chain {
                     {"Interval is not named"}
                 )?;
 
-                if !output.contains_key(&inter.name().unwrap()) {
+                if !output.contains_key(&name) {
                     output.insert(
-                        inter.name().unwrap(),
+                        name,
                         0
                     );
                 }
@@ -1535,7 +1573,11 @@ impl crate::cmap::chain::Chain {
                 // current interval and current block intersect by at least 1 bp;
                 // record their intersection
                 if let Some(x) = intersection(inter_start, inter_end, r_start, r_block_end) {
-                    *output.get_mut(name).unwrap() += x;
+                    // *output.get_mut(name).unwrap() += x;
+                    output
+                        .entry(name)
+                        .and_modify(|y| *y += x)
+                        .or_insert(0);
                 }
                 curr_end = max(curr_end, inter_end);
                 max_end = max(curr_end, max_end);
