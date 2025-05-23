@@ -74,7 +74,10 @@ impl crate::cmap::chain::Chain {
                 Some(x) => {x},
                 None => continue
             };
-            if inter_start >= end {break}
+            if inter_start >= end {
+                if self.id == 546368 {println!("Breaking at {}", i.name().unwrap())}
+                break
+            }
             let inter_end = match i.thick_end() {
                 Some(x) => {x},
                 None => continue
