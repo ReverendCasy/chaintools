@@ -82,7 +82,10 @@ impl crate::cmap::chain::Chain {
                 Some(x) => {x},
                 None => continue
             };
-            if inter_end <= start {continue};
+            if inter_end <= start {
+                if self.id == 546368 {println!("Continuing after {}", i.name().unwrap())}
+                continue
+            };
             output.push(i.clone());
         }
         output
