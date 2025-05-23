@@ -36,12 +36,12 @@ impl crate::cmap::chain::Chain {
                 Some(x) => {x},
                 None => continue
             };
-            if inter_start > end {break}
+            if inter_start >= end {break}
             let inter_end = match i.end() {
                 Some(x) => {x},
                 None => continue
             };
-            if inter_end < start {continue};
+            if inter_end <= start {continue};
             output.push(i.clone());
         }
         output
@@ -74,12 +74,12 @@ impl crate::cmap::chain::Chain {
                 Some(x) => {x},
                 None => continue
             };
-            if inter_start > end {break}
+            if inter_start >= end {break}
             let inter_end = match i.thick_end() {
                 Some(x) => {x},
                 None => continue
             };
-            if inter_end < start {continue};
+            if inter_end <= start {continue};
             output.push(i.clone());
         }
         output
