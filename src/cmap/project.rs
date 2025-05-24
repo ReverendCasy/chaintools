@@ -74,28 +74,12 @@ impl crate::cmap::chain::Chain {
                 Some(x) => {x},
                 None => continue
             };
-            if inter_start >= end {
-                if self.id == 5949197 {
-                    println!(
-                        "Breaking at {}; chain coords: {}-{}, inter coords: {}-{}", 
-                        i.name().unwrap(), start, end, inter_start, i.thick_end().unwrap()
-                    )
-                }
-                break
-            }
+            if inter_start >= end {break}
             let inter_end = match i.thick_end() {
                 Some(x) => {x},
                 None => continue
             };
-            if inter_end <= start {
-                if self.id == 5949197 {
-                    println!(
-                        "Continuing after {}; chain coords: {}-{}, inter coords: {}-{}", 
-                        i.name().unwrap(), start, end, inter_start, inter_end
-                    )
-                }
-                continue
-            };
+            if inter_end <= start {continue};
             output.push(i.clone());
         }
         output
