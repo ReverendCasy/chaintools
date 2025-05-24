@@ -83,7 +83,12 @@ impl crate::cmap::chain::Chain {
                 None => continue
             };
             if inter_end <= start {
-                if self.id == 546368 {println!("Continuing after {}", i.name().unwrap())}
+                if self.id == 546368 {
+                    println!(
+                        "Continuing after {}; chain coords: {}-{}, inter coords: {}-{}", 
+                        i.name().unwrap(), start, end, inter_start, inter_end
+                    )
+                }
                 continue
             };
             output.push(i.clone());
