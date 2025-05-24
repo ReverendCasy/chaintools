@@ -75,7 +75,12 @@ impl crate::cmap::chain::Chain {
                 None => continue
             };
             if inter_start >= end {
-                if self.id == 546368 {println!("Breaking at {}", i.name().unwrap())}
+                if self.id == 546368 {
+                    println!(
+                        "Breaking at {}; chain coords: {}-{}, inter coords: {}-{}", 
+                        i.name().unwrap(), start, end, inter_start, i.thick_end().unwrap()
+                    )
+                }
                 break
             }
             let inter_end = match i.thick_end() {
