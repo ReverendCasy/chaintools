@@ -1208,7 +1208,7 @@ impl crate::cmap::chain::Chain {
                 q_block_start = q_start - (b.dq as u64);
                 q_block_end = q_start;
             }
-            println!("Gap: r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", r_start, r_block_end, q_block_start, q_block_end);
+            // println!("Gap: r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", r_start, r_block_end, q_block_start, q_block_end);
 
             // ignore blocks standing for full deletions in the reference
             if b.dt == 0 {
