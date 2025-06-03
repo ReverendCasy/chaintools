@@ -977,10 +977,10 @@ impl crate::cmap::chain::Chain {
                     // since the chain block are sorted and do not overlap, the easiest way to prove it
                     // is to check whether the current block's end does not end within the current interval group 
                     if r_block_end > curr_end {
-                        // println!("Breakpoint pointer update: i={}, curr={}, b={}, r_start={}, r_block_end={}, inter_start={}, inter_end={}, inter_name={}", i, curr, h, r_start, r_block_end, inter_start, inter_end, inter_name); X
+                        println!("Breakpoint pointer update: i={}, curr={}, b={}, r_start={}, r_block_end={}, inter_start={}, inter_end={}, inter_name={}", i, curr, h, r_start, r_block_end, inter_start, inter_end, inter_name);
                         curr = i;
                         if curr >= intervals.len() {
-                            // println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end); X
+                            println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
                             break 'outer
                         };
                     }
@@ -1208,7 +1208,7 @@ impl crate::cmap::chain::Chain {
                 q_block_start = q_start - (b.dq as u64);
                 q_block_end = q_start;
             }
-            println!("Block: r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", r_start, r_block_end, q_block_start, q_block_end);
+            println!("Gap: r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", r_start, r_block_end, q_block_start, q_block_end);
 
             // ignore blocks standing for full deletions in the reference
             if b.dt == 0 {
