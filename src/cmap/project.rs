@@ -928,7 +928,7 @@ impl crate::cmap::chain::Chain {
                 q_block_start = q_start - (b.size as u64);
                 q_block_end = q_start;
             }
-            println!("r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", r_start, r_block_end, q_block_start, q_block_end);
+            println!("Block: r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", r_start, r_block_end, q_block_start, q_block_end);
 
             // check if this is the last block
             let is_last_block: bool = (b.dt == 0) && (b.dq == 0);
@@ -963,6 +963,8 @@ impl crate::cmap::chain::Chain {
                             }
                         );
                 }
+
+                println!("inter_start={}, inter_end={}, inter_name={}", inter_start, inter_end, inter_name);
 
 
                 // chain block is upstream to the current interval;
@@ -1206,6 +1208,7 @@ impl crate::cmap::chain::Chain {
                 q_block_start = q_start - (b.dq as u64);
                 q_block_end = q_start;
             }
+            println!("Block: r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", r_start, r_block_end, q_block_start, q_block_end);
 
             // ignore blocks standing for full deletions in the reference
             if b.dt == 0 {
