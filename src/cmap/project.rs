@@ -928,7 +928,7 @@ impl crate::cmap::chain::Chain {
                 q_block_start = q_start - (b.size as u64);
                 q_block_end = q_start;
             }
-            println!("Block: r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", r_start, r_block_end, q_block_start, q_block_end);
+            // println!("Block: r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", r_start, r_block_end, q_block_start, q_block_end);
 
             // check if this is the last block
             let is_last_block: bool = (b.dt == 0) && (b.dq == 0);
@@ -964,7 +964,7 @@ impl crate::cmap::chain::Chain {
                         );
                 }
 
-                println!("inter_start={}, inter_end={}, inter_name={}", inter_start, inter_end, inter_name);
+                // println!("inter_start={}, inter_end={}, inter_name={}", inter_start, inter_end, inter_name);
 
 
                 // chain block is upstream to the current interval;
@@ -977,10 +977,10 @@ impl crate::cmap::chain::Chain {
                     // since the chain block are sorted and do not overlap, the easiest way to prove it
                     // is to check whether the current block's end does not end within the current interval group 
                     if r_block_end > curr_end {
-                        println!("Breakpoint pointer update: i={}, curr={}, b={}, r_start={}, r_block_end={}, inter_start={}, inter_end={}, inter_name={}", i, curr, h, r_start, r_block_end, inter_start, inter_end, inter_name);
+                        // println!("Breakpoint pointer update: i={}, curr={}, b={}, r_start={}, r_block_end={}, inter_start={}, inter_end={}, inter_name={}", i, curr, h, r_start, r_block_end, inter_start, inter_end, inter_name);
                         curr = i;
                         if curr >= intervals.len() {
-                            println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
+                            // println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
                             break 'outer
                         };
                     }
