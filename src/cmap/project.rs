@@ -1000,7 +1000,7 @@ impl crate::cmap::chain::Chain {
                     // println!("Continue point; i={}, curr={}, inter_name={}", i, curr, inter_name); X
                     // increase the pointer if this is the current leading interval
                     if inter_end == curr_end {
-                        curr += 1;
+                        // curr += 1;
                         if curr >= intervals.len() {
                             // println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end); X
                             break 'outer
@@ -1285,7 +1285,7 @@ impl crate::cmap::chain::Chain {
                     // println!("Continue point; i={}, curr={}, inter_name={}", i, curr, inter_name); X
                     // increase the pointer if this is the current leading interval
                     if inter_end == curr_end {
-                        curr += 1;
+                        // curr += 1;
                         if curr >= intervals.len() {
                             // println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end); X
                             break 'outer
