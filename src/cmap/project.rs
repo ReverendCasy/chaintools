@@ -970,7 +970,7 @@ impl crate::cmap::chain::Chain {
                 // chain block is upstream to the current interval;
                 // since other are guaranteed to start at least in the same position,
                 // the current loop can be safely exited
-                if r_block_end < inter_start {
+                if r_block_end <= inter_start {
                     // println!("Bbbreakpoint!"); X
                     // the pointer can be updated here, but only if the next block is guaranteed to lie further 
                     // downstream to the previous interval;
@@ -996,7 +996,7 @@ impl crate::cmap::chain::Chain {
 
                 // chain block is downstream to the current interval;
                 // nothing to do here, proceed to the next interval;
-                if r_start > inter_end {
+                if r_start >= inter_end {
                     // println!("Continue point; i={}, curr={}, inter_name={}", i, curr, inter_name); X
                     // increase the pointer if this is the current leading interval
                     if inter_end == curr_end {
@@ -1256,7 +1256,7 @@ impl crate::cmap::chain::Chain {
                 }
 
                 // again, break if interval iterator has passed the current block 
-                if r_block_end < inter_start {
+                if r_block_end <= inter_start {
                     // println!("Bbbreakpoint!");
                     // the pointer can be updated here, but only if the next block is guaranteed to lie further 
                     // downstream to the previous interval;
@@ -1281,7 +1281,7 @@ impl crate::cmap::chain::Chain {
                 }
 
                 // continue if the interval iterator has not yet reached the block
-                if r_start > inter_end {
+                if r_start >= inter_end {
                     // println!("Continue point; i={}, curr={}, inter_name={}", i, curr, inter_name); X
                     // increase the pointer if this is the current leading interval
                     if inter_end == curr_end {
@@ -1547,7 +1547,7 @@ impl crate::cmap::chain::Chain {
                 // chain block is upstream to the current interval;
                 // since other are guaranteed to start at least in the same position,
                 // the current loop can be safely exited
-                if r_block_end < inter_start {
+                if r_block_end <= inter_start {
                     // the pointer can be updated here, but only if the next block is guaranteed to lie further 
                     // downstream to the previous interval;
                     // since the chain block are sorted and do not overlap, the easiest way to prove it
@@ -1567,7 +1567,7 @@ impl crate::cmap::chain::Chain {
 
                 // chain block is downstream to the current interval;
                 // nothing to do here, proceed to the next interval;
-                if r_start > inter_end {
+                if r_start >= inter_end {
                     // if inter_end == curr_end {
                     //     curr += 1;
                     // }
