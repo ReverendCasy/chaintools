@@ -997,12 +997,10 @@ impl crate::cmap::chain::Chain {
                 // chain block is downstream to the current interval;
                 // nothing to do here, proceed to the next interval;
                 if r_start >= inter_end {
-                    // println!("Continue point; i={}, curr={}, inter_name={}", i, curr, inter_name); X
                     // increase the pointer if this is the current leading interval
                     if inter_end == curr_end {
                         // curr += 1;
                         if curr >= intervals.len() {
-                            // println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end); X
                             break 'outer
                         };
                     }
@@ -1160,7 +1158,7 @@ impl crate::cmap::chain::Chain {
                     }
                 }
                 // then, check the end coordinate
-                if (r_start <= inter_end) && (inter_end < r_block_end) {
+                if (r_start < inter_end) && (inter_end <= r_block_end) {
                     // println!("BLOCK: inter_end={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}, codirected={}, i={}, inter_name={}", inter_end, r_start, r_block_end, q_block_start, q_block_end, codirected, i, inter_name); X
                     let offset: u64 = r_block_end - inter_end;
                     if codirected {
@@ -1358,7 +1356,7 @@ impl crate::cmap::chain::Chain {
                 }
 
                 // and the same for end coordinate
-                if (r_start <= inter_end) && (inter_end < r_block_end) {
+                if (r_start < inter_end) && (inter_end <= r_block_end) {
                     // println!("GAP: inter_end={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}, i={}, inter_name={}", inter_end, r_start, r_block_end, q_block_start, q_block_end, i, inter_name); X
                     coords_in_gap += 1;
                     if coords_in_gap == 2 && ignore_undefined {

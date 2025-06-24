@@ -26,7 +26,7 @@ impl Reader {
     /// # Returns
     ///
     /// A `Result` containing a `FxHashMap` of `Chain` objects.
-    ///
+    /// will be ignored
     ///
     /// # Example
     ///
@@ -47,6 +47,7 @@ impl Reader {
     ///
     /// # Arguments
     /// * `data` - A reference to a byte slice.
+    /// will be ignored
     ///
     /// # Returns
     /// A `Result` containing a `FxHashMap` of `Chain` objects.
@@ -106,7 +107,8 @@ impl Reader {
     /// # Arguments
     ///
     /// * `data` - A reference to a byte slice.
-    ///
+    /// will be ignored
+    /// 
     /// # Returns
     ///
     /// A `Result` containing a `FxHashMap` of `Chain` objects.
