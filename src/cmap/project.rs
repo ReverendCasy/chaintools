@@ -837,8 +837,9 @@ impl crate::cmap::chain::Chain {
         &'a self, 
         // intervals: &mut Vec<(&str, u64, u64, &str)>,
         intervals: &'a mut Vec<T>,
-        abs_threshold: u64,
-        rel_threshold: f64,
+        // abs_threshold: u64,
+        // rel_threshold: f64,
+        extrapolate: bool,
         ignore_undefined: bool
     ) -> Result<FxHashMap<&'a str, Interval>> //Result<FxHashMap<&str, (u64, u64)>> 
     where 
@@ -1010,124 +1011,166 @@ impl crate::cmap::chain::Chain {
                 // first, process the marginal cases
                 // a special case for the first block which extends beyond the chain start
                 if h == 0 && inter_start < r_start && inter_end >= r_start {
-                    let offset: u64 = r_start - inter_start;
-                    // get the relative threshold size
-                    let rel_thresh: &u64 = rel_sizes
-                        .entry(
-                            inter_name // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
-                        )
-                        .or_insert((inter.length().unwrap() as f64 * rel_threshold) as u64);
-
-                    // check if the offset is within the stated extrapolation limits 
-                    if offset > abs_threshold && offset > *rel_thresh {
-                        // coordinate is too far to be extrapolated; crop to the chain block's start
-                        if codirected {
-                            start_p = q_block_start;
-                            // assign to a storage variable
-                            output
-                                .entry(&inter_name)
-                                .and_modify(
-                                    |x| {
-                                        x.update_start(start_p)
-                                    }
-                                );
-                        } else {
-                            end_p = min(q_block_end, query_end);
-                            // assign to a storage variable
-                            output
-                                .entry(&inter_name)
-                                .and_modify(
-                                    |x| {
-                                        x.update_end(end_p)
-                                    }
-                                );
-                        }
+                    let offset: u64 = if extrapolate {r_start - inter_start} else {0};
+                    if codirected {
+                        start_p = q_block_start.checked_sub(offset).unwrap_or(0);
+                        // assign to a storage variable
+                        output
+                            .entry(&inter_name)
+                            .and_modify(
+                                |x| {
+                                    x.update_start(start_p)
+                                }
+                            );
                     } else {
-                        // extrapolated sequence's length does not exceed the stated thresholds
-                        if codirected {
-                            start_p = q_block_start.checked_sub(offset).unwrap_or(0);
-                            // assign to a storage variable
-                            output
-                                .entry(&inter_name)
-                                .and_modify(
-                                    |x| {
-                                        x.update_start(start_p)
-                                    }
-                                );
-                        } else {
-                            end_p = min(q_block_end + offset, query_end);
-                            // assign to a storage variable
-                            output
-                                .entry(&inter_name)
-                                .and_modify(
-                                    |x| {
-                                        x.update_end(end_p)
-                                    }
-                                );
-                        }
+                        end_p = min(q_block_end + offset, query_end);
+                        // assign to a storage variable
+                        output
+                            .entry(&inter_name)
+                            .and_modify(
+                                |x| {
+                                    x.update_end(end_p)
+                                }
+                            );
                     }
+                    // // get the relative threshold size
+                    // let rel_thresh: &u64 = rel_sizes
+                    //     .entry(
+                    //         inter_name // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
+                    //     )
+                    //     .or_insert((inter.length().unwrap() as f64 * rel_threshold) as u64);
+
+                    // // check if the offset is within the stated extrapolation limits 
+                    // if offset > abs_threshold && offset > *rel_thresh {
+                    //     // coordinate is too far to be extrapolated; crop to the chain block's start
+                    //     if codirected {
+                    //         start_p = q_block_start;
+                    //         // assign to a storage variable
+                    //         output
+                    //             .entry(&inter_name)
+                    //             .and_modify(
+                    //                 |x| {
+                    //                     x.update_start(start_p)
+                    //                 }
+                    //             );
+                    //     } else {
+                    //         end_p = min(q_block_end, query_end);
+                    //         // assign to a storage variable
+                    //         output
+                    //             .entry(&inter_name)
+                    //             .and_modify(
+                    //                 |x| {
+                    //                     x.update_end(end_p)
+                    //                 }
+                    //             );
+                    //     }
+                    // } else {
+                    //     // extrapolated sequence's length does not exceed the stated thresholds
+                    //     if codirected {
+                    //         start_p = q_block_start.checked_sub(offset).unwrap_or(0);
+                    //         // assign to a storage variable
+                    //         output
+                    //             .entry(&inter_name)
+                    //             .and_modify(
+                    //                 |x| {
+                    //                     x.update_start(start_p)
+                    //                 }
+                    //             );
+                    //     } else {
+                    //         end_p = min(q_block_end + offset, query_end);
+                    //         // assign to a storage variable
+                    //         output
+                    //             .entry(&inter_name)
+                    //             .and_modify(
+                    //                 |x| {
+                    //                     x.update_end(end_p)
+                    //                 }
+                    //             );
+                    //     }
+                    // }
                 }
 
                 // a special case for the last block; if interval end lies outside of the chain,
                 // try extrapolating the coordinate unless it is too far from the chain 
                 if is_last_block && inter_end >= r_end && inter_start < r_end {
                     // get the alignment offset
-                    let offset: u64 = inter_end - r_block_end;
-                    // get the relative threshold size
-                    let rel_thresh: &u64 = rel_sizes
-                        .entry(
-                            inter_name // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
-                        )
-                        .or_insert((inter.length().unwrap() as f64 * rel_threshold) as u64);
-                    
-                    // check if the offset is within the stated extrapolation limits 
-                    if offset > abs_threshold && offset > *rel_thresh {
-                        // coordinate is too far to be extrapolated; crop to the chain block's start
-                        if codirected {
-                            end_p = min(q_block_end, query_end);
-                            // assign to a storage variable
-                            output
-                                .entry(&inter_name)
-                                .and_modify(
-                                    |x| {
-                                        x.update_end(end_p)
-                                    }
-                                );
-                        } else {
-                            start_p = q_block_start;
-                            // assign to a storage variable
-                            output
-                                .entry(&inter_name)
-                                .and_modify(
-                                    |x| {
-                                        x.update_start(start_p)
-                                    }
-                                );
-                        }
+                    let offset: u64 = if extrapolate {inter_end - r_block_end} else {0};
+                    if codirected {
+                        end_p = min(q_block_end + offset, query_end);
+                        // assign to a storage variable
+                        output
+                            .entry(&inter_name)
+                            .and_modify(
+                                |x| {
+                                    x.update_end(end_p)
+                                }
+                            );
                     } else {
-                        // extrapolated sequence's length does not exceed the stated thresholds
-                        if codirected {
-                            end_p = min(q_block_end + offset, query_end);
-                            // assign to a storage variable
-                            output
-                                .entry(&inter_name)
-                                .and_modify(
-                                    |x| {
-                                        x.update_end(end_p)
-                                    }
-                                );
-                        } else {
-                            start_p = q_block_start.checked_sub(offset).unwrap_or(0);
-                            // assign to a storage variable
-                            output
-                                .entry(&inter_name)
-                                .and_modify(
-                                    |x| {
-                                        x.update_start(start_p)
-                                    }
-                                );
-                        }
+                        start_p = q_block_start.checked_sub(offset).unwrap_or(0);
+                        // assign to a storage variable
+                        output
+                            .entry(&inter_name)
+                            .and_modify(
+                                |x| {
+                                    x.update_start(start_p)
+                                }
+                            );
                     }
+                    // get the relative threshold size
+                    // let rel_thresh: &u64 = rel_sizes
+                    //     .entry(
+                    //         inter_name // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
+                    //     )
+                    //     .or_insert((inter.length().unwrap() as f64 * rel_threshold) as u64);
+                    
+                    // // check if the offset is within the stated extrapolation limits 
+                    // if offset > abs_threshold && offset > *rel_thresh {
+                    //     // coordinate is too far to be extrapolated; crop to the chain block's start
+                    //     if codirected {
+                    //         end_p = min(q_block_end, query_end);
+                    //         // assign to a storage variable
+                    //         output
+                    //             .entry(&inter_name)
+                    //             .and_modify(
+                    //                 |x| {
+                    //                     x.update_end(end_p)
+                    //                 }
+                    //             );
+                    //     } else {
+                    //         start_p = q_block_start;
+                    //         // assign to a storage variable
+                    //         output
+                    //             .entry(&inter_name)
+                    //             .and_modify(
+                    //                 |x| {
+                    //                     x.update_start(start_p)
+                    //                 }
+                    //             );
+                    //     }
+                    // } else {
+                    //     // extrapolated sequence's length does not exceed the stated thresholds
+                    //     if codirected {
+                    //         end_p = min(q_block_end + offset, query_end);
+                    //         // assign to a storage variable
+                    //         output
+                    //             .entry(&inter_name)
+                    //             .and_modify(
+                    //                 |x| {
+                    //                     x.update_end(end_p)
+                    //                 }
+                    //             );
+                    //     } else {
+                    //         start_p = q_block_start.checked_sub(offset).unwrap_or(0);
+                    //         // assign to a storage variable
+                    //         output
+                    //             .entry(&inter_name)
+                    //             .and_modify(
+                    //                 |x| {
+                    //                     x.update_start(start_p)
+                    //                 }
+                    //             );
+                    //     }
+                    // }
                 }
 
                 // check whether the start coordinate is within the block
@@ -1297,62 +1340,83 @@ impl crate::cmap::chain::Chain {
                     // println!("GAP: inter_start={}, r_start={}, r_block_end={}, q_block_start={}, q_block_end={}, i={}, inter_name={}", inter_start, r_start, r_block_end, q_block_start, q_block_end, i, inter_name); X
                     coords_in_gap += 1;
                     // get the alignment offset
-                    let offset: u64 = r_block_end - inter_start;//inter_start - r_start;
-                    // get the relative threshold size
-                    let rel_thresh: &u64 = rel_sizes
-                        .entry(
-                            inter.name().unwrap_or("a") // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
-                        )
-                        .or_insert((inter.length().unwrap() as f64 * rel_threshold) as u64);
-
-                    // check if the offset is within the stated extrapolation limits 
-                    if offset > abs_threshold && offset > *rel_thresh {
-                        // coordinate is too far to be extrapolated; crop to the chain block's start
-                        if codirected {
-                            start_p = q_block_start;
-                            // assign to a storage variable
-                            output
-                                .entry(&inter.name().unwrap())
-                                .and_modify(
-                                    |x| {
-                                        x.update_start(start_p)
-                                    }
-                                );
-                        } else {
-                            end_p = min(q_block_end, query_end);
-                            // assign to a storage variable
-                            output
-                                .entry(&inter.name().unwrap())
-                                .and_modify(
-                                    |x| {
-                                        x.update_end(end_p)
-                                    }
-                                );
-                        }
+                    let offset: u64 = if extrapolate {r_block_end - inter_start} else {0};//inter_start - r_start;
+                    if codirected {
+                        start_p = q_block_end.checked_sub(offset).unwrap_or(0);
+                        // assign to a storage variable
+                        output
+                            .entry(&inter.name().unwrap())
+                            .and_modify(
+                                |x| {
+                                    x.update_start(start_p)
+                                }
+                            );
                     } else {
-                        // extrapolated sequence's length does not exceed the stated thresholds
-                        if codirected {
-                            start_p = q_block_end.checked_sub(offset).unwrap_or(0);
-                            // assign to a storage variable
-                            output
-                                .entry(&inter.name().unwrap())
-                                .and_modify(
-                                    |x| {
-                                        x.update_start(start_p)
-                                    }
-                                );
-                        } else {
-                            end_p = min(query_end, q_block_start + offset);
-                            // assign to a storage variable
-                            output
-                                .entry(&inter.name().unwrap())
-                                .and_modify(
-                                    |x| {
-                                        x.update_end(end_p)
-                                    }
-                                );
-                        }
+                        end_p = min(query_end, q_block_start + offset);
+                        // assign to a storage variable
+                        output
+                            .entry(&inter.name().unwrap())
+                            .and_modify(
+                                |x| {
+                                    x.update_end(end_p)
+                                }
+                            );
                     }
+                    // get the relative threshold size
+                    // let rel_thresh: &u64 = rel_sizes
+                    //     .entry(
+                    //         inter.name().unwrap_or("a") // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
+                    //     )
+                    //     .or_insert((inter.length().unwrap() as f64 * rel_threshold) as u64);
+
+                    // // check if the offset is within the stated extrapolation limits 
+                    // if offset > abs_threshold && offset > *rel_thresh {
+                    //     // coordinate is too far to be extrapolated; crop to the chain block's start
+                    //     if codirected {
+                    //         start_p = q_block_start;
+                    //         // assign to a storage variable
+                    //         output
+                    //             .entry(&inter.name().unwrap())
+                    //             .and_modify(
+                    //                 |x| {
+                    //                     x.update_start(start_p)
+                    //                 }
+                    //             );
+                    //     } else {
+                    //         end_p = min(q_block_end, query_end);
+                    //         // assign to a storage variable
+                    //         output
+                    //             .entry(&inter.name().unwrap())
+                    //             .and_modify(
+                    //                 |x| {
+                    //                     x.update_end(end_p)
+                    //                 }
+                    //             );
+                    //     }
+                    // } else {
+                    //     // extrapolated sequence's length does not exceed the stated thresholds
+                    //     if codirected {
+                    //         start_p = q_block_end.checked_sub(offset).unwrap_or(0);
+                    //         // assign to a storage variable
+                    //         output
+                    //             .entry(&inter.name().unwrap())
+                    //             .and_modify(
+                    //                 |x| {
+                    //                     x.update_start(start_p)
+                    //                 }
+                    //             );
+                    //     } else {
+                    //         end_p = min(query_end, q_block_start + offset);
+                    //         // assign to a storage variable
+                    //         output
+                    //             .entry(&inter.name().unwrap())
+                    //             .and_modify(
+                    //                 |x| {
+                    //                     x.update_end(end_p)
+                    //                 }
+                    //             );
+                    //     }
+                    // }
                 }
 
                 // and the same for end coordinate
@@ -1372,62 +1436,83 @@ impl crate::cmap::chain::Chain {
                         continue
                     }
                     // get the alignment offset
-                    let offset: u64 = inter_end - r_start;//r_block_end - inter_end;
-                    // get the relative threshold size
-                    let rel_thresh: &u64 = rel_sizes
-                        .entry(
-                            inter.name().unwrap_or("a") // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
-                        )
-                        .or_insert((inter.length().unwrap() as f64 * rel_threshold) as u64);
-                    
-                    // check if the offset is within the stated extrapolation limits 
-                    if offset > abs_threshold && offset > *rel_thresh {
-                        // coordinate is too far to be extrapolated; crop to the chain block's start
-                        if codirected {
-                            end_p = min(q_block_end, query_end);
-                            // assign to a storage variable
-                            output
-                                .entry(&inter.name().unwrap())
-                                .and_modify(
-                                    |x| {
-                                        x.update_end(end_p)
-                                    }
-                                );
-                        } else {
-                            start_p = q_block_start;
-                            // assign to a storage variable
-                            output
-                                .entry(&inter.name().unwrap())
-                                .and_modify(
-                                    |x| {
-                                        x.update_start(start_p)
-                                    }
-                                );
-                        }
+                    let offset: u64 = if extrapolate {inter_end - r_start} else {0};//r_block_end - inter_end;
+                    if codirected {
+                        end_p = min(q_block_start + offset, query_end);
+                        // assign to a storage variable
+                        output
+                            .entry(&inter.name().unwrap())
+                            .and_modify(
+                                |x| {
+                                    x.update_end(end_p)
+                                }
+                            );
                     } else {
-                        // extrapolated sequence's length does not exceed the stated thresholds
-                        if codirected {
-                            end_p = min(q_block_start + offset, query_end);
-                            // assign to a storage variable
-                            output
-                                .entry(&inter.name().unwrap())
-                                .and_modify(
-                                    |x| {
-                                        x.update_end(end_p)
-                                    }
-                                );
-                        } else {
-                            start_p = q_block_end.checked_sub(offset).unwrap_or(0);
-                            // assign to a storage variable
-                            output
-                                .entry(&inter.name().unwrap())
-                                .and_modify(
-                                    |x| {
-                                        x.update_start(start_p)
-                                    }
-                                );
-                        }
+                        start_p = q_block_end.checked_sub(offset).unwrap_or(0);
+                        // assign to a storage variable
+                        output
+                            .entry(&inter.name().unwrap())
+                            .and_modify(
+                                |x| {
+                                    x.update_start(start_p)
+                                }
+                            );
                     }
+                    // get the relative threshold size
+                //     let rel_thresh: &u64 = rel_sizes
+                //         .entry(
+                //             inter.name().unwrap_or("a") // TODO: Find a way to create long-lived string literal IDs or update name() in cubiculum
+                //         )
+                //         .or_insert((inter.length().unwrap() as f64 * rel_threshold) as u64);
+                    
+                //     // check if the offset is within the stated extrapolation limits 
+                //     if offset > abs_threshold && offset > *rel_thresh {
+                //         // coordinate is too far to be extrapolated; crop to the chain block's start
+                //         if codirected {
+                //             end_p = min(q_block_end, query_end);
+                //             // assign to a storage variable
+                //             output
+                //                 .entry(&inter.name().unwrap())
+                //                 .and_modify(
+                //                     |x| {
+                //                         x.update_end(end_p)
+                //                     }
+                //                 );
+                //         } else {
+                //             start_p = q_block_start;
+                //             // assign to a storage variable
+                //             output
+                //                 .entry(&inter.name().unwrap())
+                //                 .and_modify(
+                //                     |x| {
+                //                         x.update_start(start_p)
+                //                     }
+                //                 );
+                //         }
+                //     } else {
+                //         // extrapolated sequence's length does not exceed the stated thresholds
+                //         if codirected {
+                //             end_p = min(q_block_start + offset, query_end);
+                //             // assign to a storage variable
+                //             output
+                //                 .entry(&inter.name().unwrap())
+                //                 .and_modify(
+                //                     |x| {
+                //                         x.update_end(end_p)
+                //                     }
+                //                 );
+                //         } else {
+                //             start_p = q_block_end.checked_sub(offset).unwrap_or(0);
+                //             // assign to a storage variable
+                //             output
+                //                 .entry(&inter.name().unwrap())
+                //                 .and_modify(
+                //                     |x| {
+                //                         x.update_start(start_p)
+                //                     }
+                //                 );
+                //         }
+                //     }
                 }
                 curr_end = max(curr_end, inter_end);
                 max_end = max(curr_end, max_end);
