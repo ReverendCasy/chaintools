@@ -1243,7 +1243,12 @@ impl crate::cmap::chain::Chain {
 
 
             // nothing to look past the last chain block; exit the outer for-loop
-            if is_last_block {break};
+            if is_last_block {
+                if self.id == 64 {
+                    println!("Last block reached; exiting")
+                }
+                break
+            };
 
             // update the block coordinates
             r_start += b.size as u64;
@@ -1275,6 +1280,10 @@ impl crate::cmap::chain::Chain {
                 }
                 break 'outer
             };
+
+            if self.id == 64 {
+                println!("Gap: r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", r_start, r_block_end, q_block_start, q_block_end);
+            }
 
 
             // now, iterate through the remaining intervals again,
