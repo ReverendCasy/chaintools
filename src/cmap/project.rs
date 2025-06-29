@@ -909,12 +909,7 @@ impl crate::cmap::chain::Chain {
         // TODO: Implement to_blocks() as yielder to avoid code repetition
         'outer: for (h, b) in self.alignment.iter().enumerate() {
             // break if the iterator has passed beyond the last interval
-            if r_start > max_end {
-                if self.id == 64 {
-                    println!("All intervals passed; r_start={}, r_block_end={}", r_start, r_start + (b.size as u64));
-                }
-                break
-            };
+            if r_start > max_end {break};
             let mut r_block_end: u64 = r_start + (b.size as u64);
             // skip the block preceding the first interval's start in the reference
             if r_block_end + (b.dt as u64) < min_start {
@@ -931,9 +926,7 @@ impl crate::cmap::chain::Chain {
                 q_block_start = q_start - (b.size as u64);
                 q_block_end = q_start;
             }
-            if self.id == 64 {
-                println!("Block: r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", r_start, r_block_end, q_block_start, q_block_end);
-            }
+            // println!("Block: r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", r_start, r_block_end, q_block_start, q_block_end);
 
             // check if this is the last block
             // let is_last_block: bool = (b.dt == 0) && (b.dq == 0);
@@ -953,10 +946,6 @@ impl crate::cmap::chain::Chain {
                 let inter_name = inter.name().with_context(||
                     {format!("Interval {} has an undefined name value; cannot assign projected coordinates", i)}
                 )?;
-                let found = self.id == 64 && inter_start == 49827496 && inter_end == 49827873;
-                if found {
-                    println!("Lost interval found! Current block is: r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", r_start, r_block_end, q_block_start, q_block_end)
-                }
 
                 // add a results block to the the output hash map
                 if !output.contains_key(&inter_name) {
@@ -990,9 +979,7 @@ impl crate::cmap::chain::Chain {
                         // println!("Breakpoint pointer update: i={}, curr={}, b={}, r_start={}, r_block_end={}, inter_start={}, inter_end={}, inter_name={}", i, curr, h, r_start, r_block_end, inter_start, inter_end, inter_name);
                         curr = i;
                         if curr >= intervals.len() {
-                            if self.id == 64{
-                                println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
-                            }
+                            // println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
                             break 'outer
                         };
                     }
@@ -1244,12 +1231,7 @@ impl crate::cmap::chain::Chain {
 
 
             // nothing to look past the last chain block; exit the outer for-loop
-            if is_last_block {
-                if self.id == 64 {
-                    println!("Last block reached: {:#?}", b)
-                }
-                break
-            };
+            if is_last_block {break};
 
             // update the block coordinates
             r_start += b.size as u64;
@@ -1276,15 +1258,11 @@ impl crate::cmap::chain::Chain {
 
             // current interval can be potentially exceeded at this point; exit if so
             if curr >= intervals.len() {
-                if self.id == 64 {
-                    println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
-                }
+                // println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
                 break 'outer
             };
 
-            if self.id == 64 {
-                println!("Gap: r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", r_start, r_block_end, q_block_start, q_block_end);
-            }
+            // println!("Gap: r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", r_start, r_block_end, q_block_start, q_block_end);
 
 
             // now, iterate through the remaining intervals again,
@@ -1329,9 +1307,7 @@ impl crate::cmap::chain::Chain {
                         // println!("Breakpoint pointer update: i={}, curr={}, b={}, r_start={}, r_block_end={}, inter_start={}, inter_end={}, inter_name={}", i, curr, h, r_start, r_block_end, inter_start, inter_end, inter_name); X
                         curr = i;
                         if curr >= intervals.len() {
-                            if self.id == 64 {
-                                println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
-                            }
+                            // println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
                             break 'outer
                         };
                     }
@@ -1352,9 +1328,7 @@ impl crate::cmap::chain::Chain {
                     if inter_end == curr_end {
                         // curr += 1;
                         if curr >= intervals.len() {
-                            if self.id == 64 {
-                                println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
-                            }
+                            // println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
                             break 'outer
                         };
                     }
@@ -1546,9 +1520,7 @@ impl crate::cmap::chain::Chain {
 
             // if all the transcripts have been inspected, break the outer loop
             if curr >= intervals.len() {
-                if self.id == 64 {
-                    println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
-                }
+                // println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
                 break
             };
             // update the absolute start of all the transcripts intervals
