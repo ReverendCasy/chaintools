@@ -1245,7 +1245,7 @@ impl crate::cmap::chain::Chain {
             // nothing to look past the last chain block; exit the outer for-loop
             if is_last_block {
                 if self.id == 64 {
-                    println!("Last block reached; exiting")
+                    println!("Last block reached: {:#?}", b)
                 }
                 break
             };
