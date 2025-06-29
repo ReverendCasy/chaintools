@@ -929,7 +929,9 @@ impl crate::cmap::chain::Chain {
                 q_block_start = q_start - (b.size as u64);
                 q_block_end = q_start;
             }
-            // println!("Block: r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", r_start, r_block_end, q_block_start, q_block_end);
+            if self.id == 64 {
+                println!("Block: r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", r_start, r_block_end, q_block_start, q_block_end);
+            }
 
             // check if this is the last block
             let is_last_block: bool = (b.dt == 0) && (b.dq == 0);
