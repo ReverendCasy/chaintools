@@ -948,6 +948,10 @@ impl crate::cmap::chain::Chain {
                 let inter_name = inter.name().with_context(||
                     {format!("Interval {} has an undefined name value; cannot assign projected coordinates", i)}
                 )?;
+                let found = self.id == 64 && inter_start == 49827496 && inter_end == 49827873;
+                if found {
+                    println!("Lost interval found! Current block is: r_start={}, r_block_end={}, q_block_start={}, q_block_end={}", r_start, r_block_end, q_block_start, q_block_end)
+                }
 
                 // add a results block to the the output hash map
                 if !output.contains_key(&inter_name) {
