@@ -9,6 +9,7 @@ pub struct AlignmentRecord {
     pub size: u32,
     pub dt: u32,
     pub dq: u32,
+    pub is_last: bool
 }
 
 impl AlignmentRecord {
@@ -29,7 +30,7 @@ impl AlignmentRecord {
     /// let data = chain::AlignmentRecord::parse(line);
     /// println!("{:?}", data);
     ///
-    /// > [AlignmentRecord { size: 9, dt: 1, dq: 0 }];
+    /// > [AlignmentRecord { size: 9, dt: 1, dq: 0, is_last: false}];
     /// ```
     pub fn parse(align: &[u8]) -> Vec<AlignmentRecord> {
         Self::parse_byte(align).expect("ERROR: Failed to parse alignment record")
@@ -52,7 +53,7 @@ impl AlignmentRecord {
     /// let data = chain::AlignmentRecord::from(line);
     /// println!("{:?}", data);
     ///
-    /// > Some(AlignmentRecord { size: 9, dt: 1, dq: 0 });
+    /// > Some(AlignmentRecord { size: 9, dt: 1, dq: 0, is_last: false });
     /// ```
     pub fn from(align: &[u8]) -> Option<Self> {
         Self::parse_byte(align)
@@ -81,8 +82,8 @@ impl AlignmentRecord {
     ///
     /// > AlignmentRecord { size: 9, dt: 1, dq: 0 };
     /// ```
-    pub fn new(size: u32, dt: u32, dq: u32) -> Self {
-        Self { size, dt, dq }
+    pub fn new(size: u32, dt: u32, dq: u32, is_last: bool) -> Self {
+        Self { size, dt, dq, is_last}
     }
 
     /// Dummy getter for the size of the ungapped alignment.
@@ -98,7 +99,7 @@ impl AlignmentRecord {
     /// ```
     /// use chaintools as chain;
     ///
-    /// let data = chain::AlignmentRecord::new(9, 1, 0);
+    /// let data = chain::AlignmentRecord::new(9, 1, 0, false);
     /// let line = data.size();
     /// println!("{:?}", line);
     ///
@@ -121,7 +122,7 @@ impl AlignmentRecord {
     /// ```
     /// use chaintools as chain;
     ///
-    /// let data = chain::AlignmentRecord::new(9, 1, 0);
+    /// let data = chain::AlignmentRecord::new(9, 1, 0, false);
     /// let line = data.dt();
     /// println!("{:?}", line);
     ///
@@ -144,7 +145,7 @@ impl AlignmentRecord {
     /// ```
     /// use chaintools as chain;
     ///
-    /// let data = chain::AlignmentRecord::new(9, 1, 0);
+    /// let data = chain::AlignmentRecord::new(9, 1, 0, false);
     /// let line = data.dq();
     /// println!("{:?}", line);
     ///
@@ -167,7 +168,7 @@ impl AlignmentRecord {
     /// ```
     /// use chaintools as chain;
     ///
-    /// let data = chain::AlignmentRecord::new(9, 1, 0);
+    /// let data = chain::AlignmentRecord::new(9, 1, 0, false);
     /// let line = data.to_string();
     /// println!("{:?}", line);
     ///
@@ -193,7 +194,7 @@ impl AlignmentRecord {
     /// let data = chain::AlignmentRecord::parse_byte(line);
     /// println!("{:?}", data);
     ///
-    /// > Ok([AlignmentRecord { size: 9, dt: 1, dq: 0 }]);
+    /// > Ok([AlignmentRecord { size: 9, dt: 1, dq: 0, is_last: false}]);
     /// ```
     fn parse_byte(align: &[u8]) -> Result<Vec<AlignmentRecord>> {
         let mut acc = vec![];
@@ -220,6 +221,7 @@ impl AlignmentRecord {
                     size: size,
                     dt: 0,
                     dq: 0,
+                    is_last: true
                 });
                 break;
             };
@@ -252,6 +254,7 @@ impl AlignmentRecord {
                 size: size,
                 dt: dt,
                 dq: dq,
+                is_last: false
             });
 
             align = &align[sep + end + 1..];

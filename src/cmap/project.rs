@@ -936,7 +936,8 @@ impl crate::cmap::chain::Chain {
             }
 
             // check if this is the last block
-            let is_last_block: bool = (b.dt == 0) && (b.dq == 0);
+            // let is_last_block: bool = (b.dt == 0) && (b.dq == 0);
+            let is_last_block = b.is_last;
 
             // now, we have a chain block with defined boundaries in both reference and query;
             // iterate over the intervals, check whether any of their coordinates can be projected 
