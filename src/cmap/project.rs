@@ -910,7 +910,9 @@ impl crate::cmap::chain::Chain {
         'outer: for (h, b) in self.alignment.iter().enumerate() {
             // break if the iterator has passed beyond the last interval
             if r_start > max_end {
-                // println!("All blocks passed; r_start={}, r_block_end={}", r_start, r_start + (b.size as u64));
+                if self.id == 64 {
+                    println!("All intervals passed; r_start={}, r_block_end={}", r_start, r_start + (b.size as u64));
+                }
                 break
             };
             let mut r_block_end: u64 = r_start + (b.size as u64);
@@ -987,7 +989,9 @@ impl crate::cmap::chain::Chain {
                         // println!("Breakpoint pointer update: i={}, curr={}, b={}, r_start={}, r_block_end={}, inter_start={}, inter_end={}, inter_name={}", i, curr, h, r_start, r_block_end, inter_start, inter_end, inter_name);
                         curr = i;
                         if curr >= intervals.len() {
-                            // println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
+                            if self.id == 64{
+                                println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
+                            }
                             break 'outer
                         };
                     }
@@ -1266,7 +1270,9 @@ impl crate::cmap::chain::Chain {
 
             // current interval can be potentially exceeded at this point; exit if so
             if curr >= intervals.len() {
-                // println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end); X
+                if self.id == 64 {
+                    println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
+                }
                 break 'outer
             };
 
@@ -1292,8 +1298,8 @@ impl crate::cmap::chain::Chain {
                         inter.name().unwrap(),
                         Interval::new()
                     );
-                    output.
-                        entry(&inter.name().unwrap())
+                    output
+                        .entry(&inter.name().unwrap())
                         .and_modify(
                             |x| {
                                 x.update_name(inter.name().unwrap().to_string()); // TODO: Will borrow the value!
@@ -1313,7 +1319,9 @@ impl crate::cmap::chain::Chain {
                         // println!("Breakpoint pointer update: i={}, curr={}, b={}, r_start={}, r_block_end={}, inter_start={}, inter_end={}, inter_name={}", i, curr, h, r_start, r_block_end, inter_start, inter_end, inter_name); X
                         curr = i;
                         if curr >= intervals.len() {
-                            // println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end); X
+                            if self.id == 64 {
+                                println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
+                            }
                             break 'outer
                         };
                     }
@@ -1334,7 +1342,9 @@ impl crate::cmap::chain::Chain {
                     if inter_end == curr_end {
                         // curr += 1;
                         if curr >= intervals.len() {
-                            // println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end); X
+                            if self.id == 64 {
+                                println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
+                            }
                             break 'outer
                         };
                     }
@@ -1526,7 +1536,9 @@ impl crate::cmap::chain::Chain {
 
             // if all the transcripts have been inspected, break the outer loop
             if curr >= intervals.len() {
-                // println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end); X
+                if self.id == 64 {
+                    println!("All intervals covered; r_start={}, r_block_end={}", r_start, r_block_end);
+                }
                 break
             };
             // update the absolute start of all the transcripts intervals
