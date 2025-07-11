@@ -812,6 +812,21 @@ impl crate::cmap::chain::Chain {
         Ok(output)
     }
 
+    /// [YM]
+    /// Ensures that the coordinate lies within the [0; query.size] interval
+    /// 
+    /// # Arguments
+    /// `coord` - A single coordinate value, encoded as u64
+    /// 
+    /// # Returns
+    /// 
+    /// The original coordinate if it belongs to the [0; query.size] interval, the respective 
+    /// marginal value otherwise
+    /// 
+    fn checked_query(&self, coord: u64) -> u64 {
+        max(0, min(coord, self.query.size))
+    } 
+
     /// NOTE: Functions with a trailing underscore implement 'real-time' chain body parsing;
     /// they are currently faster than their `yield_blocks()`-based counterparts,
     /// which we aim to change in futute
@@ -1011,7 +1026,7 @@ impl crate::cmap::chain::Chain {
                 if h == 0 && inter_start < r_start && inter_end >= r_start {
                     let offset: u64 = if extrapolate {r_start - inter_start} else {0};
                     if codirected {
-                        start_p = q_block_start.checked_sub(offset).unwrap_or(0);
+                        start_p = min(q_block_start.checked_sub(offset).unwrap_or(0), query_end);
                         // assign to a storage variable
                         output
                             .entry(&inter_name)
@@ -1177,7 +1192,7 @@ impl crate::cmap::chain::Chain {
                     //  start coordinate can be mapped
                     let offset: u64 = inter_start - r_start;
                     if codirected{
-                        start_p = q_block_start + offset;
+                        start_p = min(q_block_start + offset, query_end);
                         // assign to a storage variable
                         output
                             .entry(&inter_name)
@@ -1213,7 +1228,7 @@ impl crate::cmap::chain::Chain {
                                 }
                             );
                     } else {
-                        start_p = q_block_start + offset;
+                        start_p = min(q_block_start + offset, query_end);
                         // assign to a storage variable
                         output
                             .entry(&inter_name)
