@@ -25,11 +25,21 @@ impl crate::cmap::chain::Chain {
             T: Coordinates + Named + Clone + Debug
     {
         let mut output: Vec<T> = Vec::<T>::new();
-        let start: &u64 = if to_ref {&self.refs.start} else {
-            if self.query.strand == '+' {&self.query.start} else {&(self.query.size - self.query.end)}
+        let start: &u64 = match to_ref {
+            true => {
+                if self.refs.strand == '+' {&self.refs.start} else {&(self.refs.size - self.refs.end)}
+            },
+            false => {
+                if self.query.strand == '+' {&self.query.start} else {&(self.query.size - self.query.end)}
+            }
         };
-        let end: &u64 = if to_ref {&self.refs.end} else {
-            if self.query.strand == '+' {&self.query.end} else {&(self.query.size - self.query.start)}
+        let end: &u64 = match to_ref {
+            true => {
+                if self.refs.strand == '+' {&self.refs.end} else {&(self.refs.size - self.refs.start)}
+            },
+            false => {
+                if self.query.strand == '+' {&self.query.end} else {&(self.query.size - self.query.start)}
+            }
         };
         for i in intervals {
             let inter_start = match i.start() {
@@ -62,11 +72,21 @@ impl crate::cmap::chain::Chain {
     pub fn intersect_to_cds_vector(&self, intervals: &Vec<BedEntry>, to_ref: bool) -> Vec<BedEntry>
     {
         let mut output: Vec<BedEntry> = Vec::<BedEntry>::new();
-        let start: u64 = if to_ref {self.refs.start} else {
-            if self.query.strand == '+' {self.query.start} else {self.query.size - self.query.end}
+        let start: u64 = match to_ref {
+            true => {
+                if self.refs.strand == '+' {self.refs.start} else {self.refs.size - self.refs.end}
+            },
+            false => {
+                if self.query.strand == '+' {self.query.start} else {self.query.size - self.query.end}
+            }
         };
-        let end: u64 = if to_ref {self.refs.end} else {
-            if self.query.strand == '+' {self.query.end} else {self.query.size - self.query.start}
+        let end: u64 = match to_ref {
+            true => {
+                if self.refs.strand == '+' {self.refs.end} else {self.refs.size - self.refs.start}
+            },
+            false => {
+                if self.query.strand == '+' {self.query.end} else {self.query.size - self.query.start}
+            }
         };
         for i in intervals {
             if i.format() < 8 {continue}
