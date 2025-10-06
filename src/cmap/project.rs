@@ -239,6 +239,9 @@ impl crate::cmap::chain::Chain {
         where 
             T: Coordinates + Named + Debug
         {
+            // TODO: The function has not been updated for a long time
+            // For all the necessary updates to further implement here, 
+
             // the same routine as above
             // first, sort the input vector
             let mut output: FxHashMap<&str, u64> = FxHashMap::default();
@@ -364,6 +367,10 @@ impl crate::cmap::chain::Chain {
     where 
         T: Coordinates + Named + Debug
     {
+        // TODO: The function has not been updated for a long time
+        // For all the necessary updates to further implement here, 
+        // consult map_thtrough_()
+
         // let output: FxHashMap<&str, (u64, u64)> = FxHashMap::default();
         let mut output: FxHashMap<&str, Interval> = FxHashMap::default();
 
@@ -882,6 +889,8 @@ impl crate::cmap::chain::Chain {
     {
         // let output: FxHashMap<&str, (u64, u64)> = FxHashMap::default();
         let mut output: FxHashMap<&str, Interval> = FxHashMap::default();
+
+        // TODO: Adjust for negative ref strand
 
         intervals.sort_by(
         |a, b| if a.start().unwrap() == b.start().unwrap() {
@@ -1592,55 +1601,96 @@ impl crate::cmap::chain::Chain {
         // the same routine as above
         // first, sort the input vector
         let mut output: FxHashMap<&str, u64> = FxHashMap::default();
-        intervals.sort_by(
-            |a, b| if a.start().unwrap() == b.start().unwrap() {
-                a.end().unwrap().cmp(&b.end().unwrap())
-            } else {
-                a.start().unwrap().cmp(&b.start().unwrap())
+        assert!(intervals.len() > 0);
+
+        // get the reference strand
+        let ref_strand = self.refs.strand == '+';
+
+        // sort the intervals by their coordinates;
+        // if reference strand is negative, invert the sorting order
+        match ref_strand {
+            true => {
+                intervals.sort_by(
+                    |a, b| if a.start().unwrap() == b.start().unwrap() {
+                        a.end().unwrap().cmp(&b.end().unwrap())
+                    } else {
+                        a.start().unwrap().cmp(&b.start().unwrap())
+                    }
+                );
+            },
+            false => {
+                intervals.sort_by(
+                    |a, b| if a.start().unwrap() == b.start().unwrap() {
+                        a.end().unwrap().cmp(&b.end().unwrap()).reverse()
+                    } else {
+                        a.start().unwrap().cmp(&b.start().unwrap()).reverse()
+                    }
+                );
             }
-        );
+        };
         // define the total span for the input intervals
-        let mut min_start: u64 = *intervals[0].start().with_context(||
-            {"Cannot assess coverage for intervals with undefined coordinates"}
-        )?;
+        let mut min_start: u64 = *intervals[if ref_strand {0} else {intervals.len() - 1}]
+            .start()
+            .with_context(||
+                {"Cannot assess coverage for intervals with undefined coordinates"}
+            )?;
         // note, however,  that the elements are sorted by the start coordinate alone,
         // so the last element must not necessarily end farthest
-        let mut max_end: u64 = *intervals[intervals.len() - 1].end().with_context(||
-            {"Cannot assess coverage for intervals with undefined coordinates"}
-        )?;
+        // (for negative reference strand, apply the inverted logic to min_start )
+        let mut max_end: u64 = *intervals[if ref_strand {intervals.len() - 1} else {0}]
+            .end()
+            .with_context(||
+                {"Cannot assess coverage for intervals with undefined coordinates"}
+            )?;
         // create a smart iteration index; iteration will always start from this interval
         let mut curr: usize = 0;
-        // record the current interval's end coordinate; this will ensure that the iterator will never
-        // skip the nested intervals
-        let mut curr_end: u64 = *intervals[0].end().with_context(||
-            {"Cannot assess coverage for intervals with undefined coordinates"}
-        )?;
 
         // create a smart iteration index; iteration will always start from this interval
         let mut curr: usize = 0;
         // record the current interval's end coordinate; this will ensure that the iterator will never
         // skip the nested intervals
         let mut curr_end: u64 = *intervals[0].end().with_context(||
+            {"Cannot assess coverage for intervals with undefined coordinates"}
+        )?;
+        // same for the current start; the reason is the same but applied to negative ref strand
+        let mut curr_start: u64 = *intervals[0].start().with_context(||
             {"Cannot assess coverage for intervals with undefined coordinates"}
         )?;
 
         // initialize the variables standing for block coordinates
         // in this case, only the ref coordinates matter
-        let mut r_start: u64 = self.refs.start;
-        let mut r_block_end: u64 = 0;
-        let r_end: u64 = self.refs.end;
+        let mut r_start: u64;
+        let mut r_end: u64;
+        match ref_strand {
+            true => {
+                r_start = self.refs.start;
+                r_end = self.refs.end;
+            },
+            false => {
+                // NOTE: Below, r_start is defined as GREATER coordinate;
+                // this is intended, since in the negative ref strand case 
+                // the iterator moves upstream along the ref genome
+                r_start = self.refs.size - self.refs.start;
+                r_end = self.refs.size - self.refs.end;
+            }
+        };
+        let mut r_block_start = r_start;
+        let mut r_block_end = 0;
 
         // now go
         for (h, b) in self.alignment.iter().enumerate() {
-            r_block_end = r_start + b.size as u64;
+            (r_block_start, r_block_end) = match ref_strand {
+                true => {(r_start, r_start + b.size as u64)},
+                false => {(r_start - b.size as u64, r_start)}
+            };
             // continue if the first interval has not yet been reached
-            if r_block_end < min_start {
+            if (ref_strand && r_block_end < min_start) || (!ref_strand && r_block_start >= max_end) {
                 // don't forget to update the next block's start point
-                r_start += (b.size + b.dt) as u64;
+                r_start = if ref_strand {r_start + (b.size + b.dt) as u64} else {r_start - (b.size + b.dt) as u64};
                 continue
             };
             // break the block loop if the last interval has been passed
-            if r_start > max_end {
+            if (ref_strand && r_start > max_end) || (!ref_strand && r_block_end <= min_start) {
                 break
             };
             for (mut i, inter) in intervals[curr..].iter().enumerate() {
@@ -1665,27 +1715,31 @@ impl crate::cmap::chain::Chain {
                 // chain block is upstream to the current interval;
                 // since other are guaranteed to start at least in the same position,
                 // the current loop can be safely exited
-                if r_block_end <= inter_start {
+                if (ref_strand && r_block_end <= inter_start) || (!ref_strand && r_block_start > inter_end) {
                     // the pointer can be updated here, but only if the next block is guaranteed to lie further 
                     // downstream to the previous interval;
                     // since the chain block are sorted and do not overlap, the easiest way to prove it
-                    // is to check whether the current block's end does not end within the current interval group 
-                    if r_block_end >= curr_end {
+                    // is to check whether the current block's end does not lie within the current interval group 
+                    if (ref_strand && r_block_end >= curr_end) || (!ref_strand && r_block_start < curr_start) {
                         curr = i
                     }
                     // potentially this is the farthest the intervals have ever reached 
                     // in terms of the  end coordinate; unless this boundary is exceeded, 
                     // the iteration start point will not be updated
-                    if inter_end >= curr_end {
+                    if ref_strand && inter_end >= curr_end {
                         // curr = i;
                         curr_end = inter_end;
+                    }
+                    if !ref_strand && inter_start <= curr_start {
+                        // curr = i;
+                        curr_start = inter_start;
                     }
                     break
                 }
 
                 // chain block is downstream to the current interval;
                 // nothing to do here, proceed to the next interval;
-                if r_start >= inter_end {
+                if (ref_strand && r_start >= inter_end) || (!ref_strand && r_block_end <= inter_start) {
                     // if inter_end == curr_end {
                     //     curr += 1;
                     // }
@@ -1694,7 +1748,7 @@ impl crate::cmap::chain::Chain {
 
                 // current interval and current block intersect by at least 1 bp;
                 // record their intersection
-                if let Some(x) = intersection(inter_start, inter_end, r_start, r_block_end) {
+                if let Some(x) = intersection(inter_start, inter_end, r_block_start, r_block_end) {
                     // *output.get_mut(name).unwrap() += x;
                     output
                         .entry(name)
